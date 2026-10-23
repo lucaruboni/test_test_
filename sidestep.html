@@ -7,11 +7,11 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
-/* Layout: replica della griglia di selezione di Tekken 8 (3 righe, Random al centro), risultato grande sotto. Single dark look da schermata di selezione. */
+/* Layout: app orizzontale. Roster della selezione di Tekken 8 a 3/4 della larghezza e tutta l'altezza; pannello di dettaglio a destra. Single dark look da schermata di selezione. */
 :root {
   --bg: #0b0d14;
-  --stage: #161a2b;
-  --panel: #171a22;
+  --stage: #1c1530;
+  --panel: #141722;
   --line: #2a2f3c;
   --fg: #eef0f5;
   --muted: #8d93a3;
@@ -25,74 +25,86 @@
 }
 html, body { height: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body);
+  margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--body); overflow: hidden;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 14px; padding-block: 12px 32px; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 14px; }
 
-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-h1 { font: 700 20px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 0; flex: 1; }
-h1 span { color: var(--muted); font-weight: 500; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { font: 700 13px var(--display); letter-spacing: .06em; padding: 8px 12px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
-#q { flex: 1 1 220px; min-width: 0; font: 600 16px var(--body); padding: 9px 12px; background: var(--panel); color: var(--fg); border: 2px solid var(--line); border-radius: 10px; outline: none; }
-#q:focus { border-color: var(--fg); }
-
-/* Griglia selezione */
-.stage { background: radial-gradient(120% 90% at 50% 0%, var(--stage), var(--bg)); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px; overflow-x: auto; }
-.css { display: grid; grid-template-columns: repeat(14, minmax(34px, 1fr)); gap: 5px; min-width: 520px; }
+/* Roster */
+.stage {
+  min-height: 0; padding-block: 10px; box-sizing: border-box;
+  background: radial-gradient(90% 70% at 50% 30%, var(--stage), var(--bg) 75%);
+}
+.css {
+  height: 100%; display: grid; gap: 4px;
+  grid-template-columns: repeat(15, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
 .slot {
-  position: relative; aspect-ratio: 4 / 5; border-radius: 7px; border: 1px solid var(--line); cursor: pointer;
-  background: linear-gradient(180deg, #232838, #12151f); color: var(--fg); padding: 0; overflow: hidden;
-  display: grid; place-items: center; font: 700 clamp(11px, 1.6vw, 17px)/1 var(--display); letter-spacing: .02em;
-  transform: skewX(-4deg);
+  container-type: size; position: relative; min-width: 0; min-height: 0; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; overflow: hidden; text-align: center;
+  background: #12151f; color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
 }
-.slot > * { transform: skewX(4deg); }
-.slot .ab { margin-top: -10%; }
-.slot .full { position: absolute; left: 0; right: 0; top: 4px; font: 600 9.5px/1.1 var(--body); color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-inline: 2px; }
-.slot .dir { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; display: grid; place-items: center; background: var(--c); color: var(--bg); font: 700 clamp(9px, 1.1vw, 12px)/1 var(--display); }
+.slot .pic { flex: none; width: 100%; aspect-ratio: 75 / 86; max-height: 58%; overflow: hidden; background: linear-gradient(160deg, #2a2f45, #141824); display: grid; place-items: center; }
+.slot .pic img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+.slot .pic .ini { font: 700 34cqw/1 var(--display); color: var(--muted); }
+.slot .nm { flex: none; font: 600 clamp(8px, 11cqw, 13px)/1.15 var(--body); padding: 3px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #0e1018; }
+.slot .dir {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh;
+  background: color-mix(in srgb, var(--c) 22%, #0e1018); color: var(--c); border-top: 3px solid var(--c);
+}
+.slot .dir b { font: 700 min(24cqw, 9cqh)/1 var(--display); letter-spacing: .02em; }
+.slot .dir i { font: 700 min(52cqw, 18cqh)/1 var(--display); font-style: normal; }
 .slot.dlc { border-style: dashed; }
-.slot.empty { visibility: hidden; pointer-events: none; }
-.slot.rand { background: #1a1d29; color: var(--muted); font-size: 26px; cursor: default; }
-.slot:hover, .slot:focus-visible { border-color: var(--fg); outline: none; z-index: 1; }
-.slot.on { border: 2px solid var(--sel); box-shadow: 0 0 0 2px var(--sel), 0 0 18px var(--sel); z-index: 2; }
-.slot.dim { opacity: .18; }
-.slot.swap { border: 2px dashed var(--fg); }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); align-items: center; }
-.legend b { font-family: var(--display); }
-.legend button { margin-left: auto; }
+.slot.rand { cursor: default; display: grid; place-items: center; color: var(--muted); background: #161926; }
+.slot.rand span { font: 700 40cqw/1 var(--display); }
+.slot.empty { visibility: hidden; }
+.slot:hover, .slot:focus-visible { border-color: var(--fg); outline: none; }
+.slot.on { border: 2px solid var(--sel); box-shadow: 0 0 14px var(--sel); }
+.slot.dim { opacity: .15; }
+.slot.swap { outline: 2px dashed var(--fg); outline-offset: -4px; }
 
-/* Risultato */
-#result {
-  display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; align-items: center;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
-  border-left: 8px solid var(--c, var(--line));
-}
-#result .arrow { grid-row: span 3; font: 700 84px/1 var(--display); color: var(--c); min-width: 1.1em; text-align: center; }
-#result .name { font: 700 26px/1.1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
-#result .dirl { font: 700 40px/1 var(--display); color: var(--c); letter-spacing: .04em; }
-#result .dirl small { font-size: 16px; color: var(--fg); letter-spacing: 0; font-family: var(--body); font-weight: 600; margin-left: 8px; }
-#result .note { color: var(--muted); min-width: 0; }
-#result .tools { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
-.chip { font: 600 13px var(--body); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+/* Pannello */
+.side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-block: 12px; }
+h1 { font: 700 18px/1 var(--display); letter-spacing: .05em; text-transform: uppercase; margin: 0; }
+h1 span { color: var(--muted); font-weight: 500; }
+#q { width: 100%; box-sizing: border-box; font: 600 15px var(--body); padding: 9px 11px; background: var(--panel); color: var(--fg); border: 2px solid var(--line); border-radius: 9px; outline: none; }
+#q:focus { border-color: var(--fg); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; font: 700 13px var(--display); letter-spacing: .06em; padding: 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+#result { background: var(--panel); border: 1px solid var(--line); border-top: 6px solid var(--c, var(--line)); border-radius: 12px; padding: 14px; display: grid; gap: 8px; }
+#result .top { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
+#result .face { width: 64px; aspect-ratio: 75 / 86; border-radius: 6px; overflow: hidden; background: #22263a; display: grid; place-items: center; font: 700 20px var(--display); color: var(--muted); }
+#result .face img { width: 100%; height: 100%; object-fit: cover; }
+#result .name { font: 700 22px/1.1 var(--display); text-transform: uppercase; overflow-wrap: anywhere; }
+#result .big { display: flex; align-items: center; gap: 14px; color: var(--c); }
+#result .big .arrow { font: 700 72px/1 var(--display); }
+#result .big .lbl { font: 700 34px/1 var(--display); }
+#result .big small { display: block; font: 600 13px/1.3 var(--body); color: var(--fg); margin-top: 4px; }
+#result .note { color: var(--muted); }
+.tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip { font: 600 12.5px var(--body); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
 .chip:hover, .chip:focus-visible { border-color: var(--fg); outline: none; }
 .chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 .edited { color: var(--both); font-size: 12px; font-weight: 600; }
-.hint { color: var(--muted); font-size: 13px; margin: 0; }
-footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 6px; max-width: 75ch; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend b { font-family: var(--display); }
+.hint, footer { color: var(--muted); font-size: 12px; margin: 0; }
+footer { display: grid; gap: 6px; margin-top: auto; }
 footer a { color: var(--fg); }
-@media (max-width: 560px) {
-  .stage { padding: 10px 6px; }
-  .css { min-width: 0; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; }
-  .slot { font-size: 9.5px; border-radius: 5px; letter-spacing: 0; }
-  .slot .dir { font-size: 7.5px; }
-  .slot.rand { font-size: 16px; }
-  .slot .full { display: none; }
-  .slot .ab { margin-top: -18%; }
-  #result .arrow { font-size: 64px; }
-  #result .dirl { font-size: 32px; }
+.rotate { display: none; }
+
+/* Telefono in verticale: roster sopra, pannello sotto */
+@media (orientation: portrait) and (max-width: 900px) {
+  body { overflow: auto; }
+  .app { height: auto; grid-template-columns: minmax(0, 1fr); }
+  .stage { height: 62vh; }
+  .css { gap: 2px; }
+  .slot { border-radius: 4px; }
+  .slot .nm { display: none; }
+  .rotate { display: block; }
 }
 @media (prefers-reduced-motion: no-preference) {
   #result.flash { animation: pop .18s ease-out; }
@@ -101,88 +113,93 @@ footer a { color: var(--fg); }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
+<div class="app">
+  <div class="stage"><div class="css" id="css"></div></div>
+
+  <aside class="side">
     <h1>Sidestep <span>Tekken 8</span></h1>
-    <input id="q" type="search" placeholder="Scrivi il nome… (Invio = primo)" autocomplete="off" autofocus>
+    <p class="hint rotate">Gira il telefono in orizzontale per vedere il roster più grande.</p>
+    <input id="q" type="search" placeholder="Cerca… (Invio = primo)" autocomplete="off" autofocus>
     <div class="seg" role="group" aria-label="Il tuo lato">
       <button id="p1" type="button" aria-pressed="true">P1 ◀</button>
       <button id="p2" type="button" aria-pressed="false">▶ P2</button>
     </div>
-  </header>
-
-  <div class="stage"><div class="css" id="css"></div></div>
-
-  <div class="legend">
-    <span><b style="color:var(--ssl)">SSL</b> sidestep sinistro</span>
-    <span><b style="color:var(--ssr)">SSR</b> sidestep destro</span>
-    <span><b style="color:var(--both)">±</b> dipende</span>
-    <span>bordo tratteggiato = DLC</span>
-    <button class="chip" id="swapBtn" type="button" aria-pressed="false">Sposta personaggi</button>
-  </div>
-  <p class="hint" id="swapHint" hidden>Tocca due caselle per scambiarle. Premi di nuovo “Sposta personaggi” per finire. <button class="chip" id="resetGrid" type="button">Ripristina griglia</button></p>
-
-  <section id="result" aria-live="polite"></section>
-
-  <footer>
-    <span>Tasti: scrivi per evidenziare, <b>Invio</b> apre il primo, <b>Esc</b> svuota, <b>Tab</b> cambia lato P1/P2. La freccia è il tasto da premere due volte sul tuo lato.</span>
-    <span>Griglia: le 32 caselle base e Random sono nelle posizioni del gioco; Eddy è a sinistra della prima riga come nel gioco. Per gli altri DLC non ho trovato la posizione esatta: sono ai lati, e con “Sposta personaggi” li metti dove li vedi tu (resta salvato su questo dispositivo).</span>
-    <span>Dati sidestep: chart della community (TekkenDocs “Universal Sidestep Counter Chart”, via <a href="https://note.com/dkhksdkidksh/n/nb297891d3b7f" target="_blank" rel="noopener">note.com</a>, e <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3298785870" target="_blank" rel="noopener">guida Steam</a>). È il lato debole generale: molte mosse tracciano comunque. “Inverti per me” salva la tua versione.</span>
-  </footer>
+    <section id="result" aria-live="polite"></section>
+    <div class="legend">
+      <span><b style="color:var(--ssl)">SSL</b> sinistro</span>
+      <span><b style="color:var(--ssr)">SSR</b> destro</span>
+      <span><b style="color:var(--both)">±</b> dipende</span>
+      <span>tratteggio = DLC</span>
+    </div>
+    <div class="tools">
+      <button class="chip" id="swapBtn" type="button" aria-pressed="false">Sposta personaggi</button>
+      <button class="chip" id="resetGrid" type="button" hidden>Ripristina griglia</button>
+    </div>
+    <p class="hint" id="swapHint" hidden>Tocca due caselle per scambiarle. Premi di nuovo “Sposta personaggi” per finire.</p>
+    <footer>
+      <span>Tasti: scrivi per evidenziare, <b>Invio</b> apre il primo, <b>Esc</b> svuota, <b>Tab</b> cambia lato. La freccia è il tasto da premere due volte sul tuo lato.</span>
+      <span>Dati sidestep: chart della community (TekkenDocs, via <a href="https://note.com/dkhksdkidksh/n/nb297891d3b7f" target="_blank" rel="noopener">note.com</a>; <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3298785870" target="_blank" rel="noopener">guida Steam</a>). Lato debole generale: molte mosse tracciano comunque.</span>
+    </footer>
+  </aside>
 </div>
 
 <script>
-// d: "L" = SSL, "R" = SSR, "B" = dipende
+// [sigla, direzione, nota, immagine]. Direzione: "L" = SSL, "R" = SSR, "B" = dipende / nessun dato.
+const NEW = "Personaggio nuovo: non è nel chart di riferimento. Imposta tu la direzione con “Inverti per me”.";
 const CHARS = {
-  "Alisa": ["ALI", "R", "Alcuni giocatori preferiscono SSL."],
-  "Anna": ["ANN", "R", ""],
-  "Armor King": ["AK", "L", ""],
-  "Asuka": ["ASU", "R", ""],
-  "Azucena": ["AZU", "L", ""],
-  "Bryan": ["BRY", "R", ""],
-  "Claudio": ["CLA", "L", ""],
-  "Clive": ["CLI", "R", "SSR, e side-roll a sinistra funziona spesso."],
-  "Devil Jin": ["DJ", "L", "Discusso: alcuni dicono che molte mosse tracciano SSL e preferiscono SSR."],
-  "Dragunov": ["DRA", "R", ""],
-  "Eddy": ["EDD", "R", ""],
-  "Fahkumram": ["FAH", "R", ""],
-  "Feng": ["FEN", "L", ""],
-  "Heihachi": ["HEI", "L", "Discusso: parte della community indica SSR contro molte sue mosse."],
-  "Hwoarang": ["HWO", "B", "Dipende dallo stance: SSL quando NON è in stance (flamingo)."],
-  "Jack-8": ["JAC", "L", ""],
-  "Jin": ["JIN", "R", ""],
-  "Jun": ["JUN", "R", ""],
-  "Kazuya": ["KAZ", "L", ""],
-  "King": ["KIN", "R", ""],
-  "Kuma": ["KUM", "R", "Hitbox enorme: traccia bene da entrambi i lati, il timing conta."],
-  "Lars": ["LAR", "R", "Attenzione ai heat smash mid/low."],
-  "Law": ["LAW", "R", ""],
-  "Lee": ["LEE", "B", "Non presente nel chart di riferimento: imposta tu la direzione con “Inverti per me”."],
-  "Leo": ["LEO", "R", ""],
-  "Leroy": ["LER", "L", ""],
-  "Lidia": ["LID", "R", "Discusso: alcuni chart indicano SSL."],
-  "Lili": ["LIL", "L", ""],
-  "Miary Zo": ["MIA", "L", ""],
-  "Nina": ["NIN", "R", ""],
-  "Panda": ["PAN", "R", ""],
-  "Paul": ["PAU", "R", ""],
-  "Raven": ["RAV", "L", ""],
-  "Reina": ["REI", "R", ""],
-  "Shaheen": ["SHA", "R", ""],
-  "Steve": ["STE", "L", ""],
-  "Victor": ["VIC", "R", ""],
-  "Xiaoyu": ["XIA", "R", ""],
-  "Yoshimitsu": ["YOS", "L", ""],
-  "Zafina": ["ZAF", "L", ""],
+  "Alisa": ["ALI", "R", "Alcuni giocatori preferiscono SSL.", "alisa"],
+  "Anna": ["ANN", "R", "", "anna"],
+  "Armor King": ["AK", "L", "", "armorking"],
+  "Asuka": ["ASU", "R", "", "asuka"],
+  "Azucena": ["AZU", "L", "", "azucena"],
+  "Bob": ["BOB", "B", NEW, null],
+  "Bryan": ["BRY", "R", "", "bryan"],
+  "Claudio": ["CLA", "L", "", "claudio"],
+  "Clive": ["CLI", "R", "SSR, e side-roll a sinistra funziona spesso.", "clive"],
+  "Devil Jin": ["DJ", "L", "Discusso: alcuni dicono che molte mosse tracciano SSL e preferiscono SSR.", "deviljin"],
+  "Dragunov": ["DRA", "R", "", "dragunov"],
+  "Eddy": ["EDD", "R", "", "eddy"],
+  "Fahkumram": ["FAH", "R", "", "fahkumram"],
+  "Feng": ["FEN", "L", "", "feng"],
+  "Heihachi": ["HEI", "L", "Discusso: parte della community indica SSR contro molte sue mosse.", "heihachi"],
+  "Hwoarang": ["HWO", "B", "Dipende dallo stance: SSL quando NON è in stance (flamingo).", "hwoarang"],
+  "Jack-8": ["JAC", "L", "", "jack8"],
+  "Jin": ["JIN", "R", "", "jin"],
+  "Jun": ["JUN", "R", "", "jun"],
+  "Kazuya": ["KAZ", "L", "", "kazuya"],
+  "King": ["KIN", "R", "", "king"],
+  "Kuma": ["KUM", "R", "Hitbox enorme: traccia bene da entrambi i lati, il timing conta.", "kuma"],
+  "Kunimitsu": ["KUN", "B", NEW, "kunimitsu"],
+  "Lars": ["LAR", "R", "Attenzione ai heat smash mid/low.", "lars"],
+  "Law": ["LAW", "R", "", "law"],
+  "Lee": ["LEE", "B", "Non è nel chart di riferimento: imposta tu la direzione con “Inverti per me”.", "lee"],
+  "Leo": ["LEO", "R", "", "leo"],
+  "Leroy": ["LER", "L", "", "leroy"],
+  "Lidia": ["LID", "R", "Discusso: alcuni chart indicano SSL.", "lidia"],
+  "Lili": ["LIL", "L", "", "lili"],
+  "Miary Zo": ["MIA", "L", "", "miaryzo"],
+  "Nina": ["NIN", "R", "", "nina"],
+  "Panda": ["PAN", "R", "", "panda"],
+  "Paul": ["PAU", "R", "", "paul"],
+  "Raven": ["RAV", "L", "", "raven"],
+  "Reina": ["REI", "R", "", "reina"],
+  "Roger Jr.": ["ROG", "B", NEW, null],
+  "Shaheen": ["SHA", "R", "", "shaheen"],
+  "Steve": ["STE", "L", "", "steve"],
+  "Victor": ["VIC", "R", "", "victor"],
+  "Xiaoyu": ["XIA", "R", "", "xiaoyu"],
+  "Yoshimitsu": ["YOS", "L", "", "yoshimitsu"],
+  "Yujiro Hanma": ["YUJ", "B", NEW, "yujiro"],
+  "Zafina": ["ZAF", "L", "", "zafina"],
 };
-const DLC = new Set(["Eddy", "Lidia", "Heihachi", "Clive", "Anna", "Fahkumram", "Armor King", "Miary Zo"]);
-// 14 colonne: [DLC sx] + 11 colonne base + [DLC dx] [DLC dx2]. "?" = Random, null = vuoto.
+const DLC = new Set(["Eddy", "Lidia", "Heihachi", "Clive", "Anna", "Fahkumram", "Armor King", "Miary Zo", "Kunimitsu", "Bob", "Roger Jr.", "Yujiro Hanma"]);
+// 15 colonne: 2 colonne DLC a sinistra, le 11 colonne base, 2 colonne DLC a destra. "?" = Random.
 const DEFAULT_GRID = [
-  ["Eddy", "Claudio", "Azucena", "Paul", "Bryan", "Victor", "Reina", "Zafina", "Shaheen", "Law", "Leroy", "Leo", "Clive", "Armor King"],
-  ["Lidia", "Panda", "Asuka", "Lee", "Xiaoyu", "Jin", "?", "Kazuya", "Nina", "Hwoarang", "Feng", "Jack-8", "Anna", "Miary Zo"],
-  ["Heihachi", "Kuma", "Lili", "Alisa", "Lars", "Jun", "Devil Jin", "Yoshimitsu", "King", "Steve", "Raven", "Dragunov", "Fahkumram", null],
+  ["Armor King", "Eddy", "Claudio", "Azucena", "Paul", "Bryan", "Victor", "Reina", "Zafina", "Shaheen", "Law", "Leroy", "Leo", "Lidia", "Miary Zo"],
+  ["Kunimitsu", "Heihachi", "Panda", "Asuka", "Lee", "Xiaoyu", "Jin", "?", "Kazuya", "Nina", "Hwoarang", "Feng", "Jack-8", "Clive", "Bob"],
+  ["Roger Jr.", "Anna", "Kuma", "Lili", "Alisa", "Lars", "Jun", "Devil Jin", "Yoshimitsu", "King", "Steve", "Raven", "Dragunov", "Fahkumram", "Yujiro Hanma"],
 ];
-const ALIASES = { dj: "Devil Jin", jack: "Jack-8", hei: "Heihachi", ak: "Armor King", hwo: "Hwoarang", yoshi: "Yoshimitsu", ling: "Xiaoyu", drag: "Dragunov", fahk: "Fahkumram", miary: "Miary Zo", zo: "Miary Zo" };
+const ALIASES = { dj: "Devil Jin", jack: "Jack-8", hei: "Heihachi", ak: "Armor King", hwo: "Hwoarang", yoshi: "Yoshimitsu", ling: "Xiaoyu", drag: "Dragunov", fahk: "Fahkumram", miary: "Miary Zo", zo: "Miary Zo", kuni: "Kunimitsu", roger: "Roger Jr.", yujiro: "Yujiro Hanma", hanma: "Yujiro Hanma" };
 
 const store = {
   get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
@@ -197,23 +214,36 @@ const $ = id => document.getElementById(id);
 const q = $("q"), cssEl = $("css"), result = $("result");
 
 function loadGrid() {
-  const g = store.get("ss-grid", null);
+  const g = store.get("ss-grid2", null);
   // usa la griglia salvata solo se contiene esattamente gli stessi personaggi
   const flat = x => x.flat().filter(n => n && n !== "?").sort().join();
   return g && Array.isArray(g) && g.length === 3 && flat(g) === flat(DEFAULT_GRID) ? g : DEFAULT_GRID.map(r => r.slice());
 }
 const dirOf = n => overrides[n] || CHARS[n][1];
 const color = d => d === "L" ? "var(--ssl)" : d === "R" ? "var(--ssr)" : "var(--both)";
-const label = d => d === "L" ? "SSL" : d === "R" ? "SSR" : "SSL / SSR";
+const label = d => d === "L" ? "SSL" : d === "R" ? "SSR" : "±";
 // Su P1 il personaggio guarda a destra: la sua sinistra è lo sfondo (↑). Su P2 è invertito.
 function input(d) {
   if (d === "B") return "↕";
   return ((d === "L") === (side === "p1")) ? "↑" : "↓";
 }
 function inputText(d) {
-  if (d === "B") return "guarda lo stance";
+  if (d === "B") return "dipende: leggi la nota";
   return input(d) === "↑" ? "↑↑ verso lo sfondo" : "↓↓ verso lo schermo";
 }
+function picEl(name, cls) {
+  const box = document.createElement("span");
+  box.className = cls;
+  const file = CHARS[name][3];
+  if (file) {
+    const img = document.createElement("img");
+    img.src = "img/t8/" + file + ".png"; img.alt = ""; img.loading = "lazy";
+    img.onerror = () => { img.remove(); box.append(iniEl(name)); };
+    box.append(img);
+  } else box.append(iniEl(name));
+  return box;
+}
+function iniEl(name) { const s = document.createElement("span"); s.className = "ini"; s.textContent = CHARS[name][0]; return s; }
 
 function matches(term) {
   const t = term.toLowerCase().trim();
@@ -231,34 +261,37 @@ function matches(term) {
 }
 
 function renderGrid() {
-  const m = matches(q.value);
-  const hit = new Set(m);
-  cssEl.innerHTML = "";
+  const m = matches(q.value), hit = new Set(m), searching = !!q.value.trim();
+  cssEl.replaceChildren();
   grid.forEach((row, r) => row.forEach((name, c) => {
     const b = document.createElement("button");
-    b.type = "button";
-    b.style.gridRow = r + 1; b.style.gridColumn = c + 1;
-    if (!name) {
-      if (swapMode) { b.className = "slot"; b.style.opacity = ".3"; b.setAttribute("aria-label", "Casella vuota"); b.onclick = () => clickSlot(r, c); }
-      else b.className = "slot empty";
-      if (swapFirst && swapFirst[0] === r && swapFirst[1] === c) b.classList.add("swap");
-      cssEl.appendChild(b); return;
-    }
-    if (name === "?") { b.className = "slot rand"; b.textContent = "?"; b.setAttribute("aria-label", "Random"); b.tabIndex = -1; cssEl.appendChild(b); return; }
-    const d = dirOf(name);
-    b.className = "slot" + (DLC.has(name) ? " dlc" : "");
-    if (current === name) b.classList.add("on");
-    if (q.value.trim() && !hit.has(name)) b.classList.add("dim");
+    b.type = "button"; b.style.gridRow = r + 1; b.style.gridColumn = c + 1;
     if (swapFirst && swapFirst[0] === r && swapFirst[1] === c) b.classList.add("swap");
+    if (!name) {
+      b.classList.add("slot", swapMode ? "dim" : "empty");
+      b.setAttribute("aria-label", "Casella vuota");
+      if (swapMode) b.onclick = () => clickSlot(r, c);
+      cssEl.append(b); return;
+    }
+    if (name === "?") {
+      b.classList.add("slot", "rand"); b.innerHTML = "<span>?</span>"; b.tabIndex = -1; b.setAttribute("aria-label", "Random");
+      cssEl.append(b); return;
+    }
+    const d = dirOf(name);
+    b.classList.add("slot");
+    if (DLC.has(name)) b.classList.add("dlc");
+    if (current === name) b.classList.add("on");
+    if (searching && !hit.has(name)) b.classList.add("dim");
     b.style.setProperty("--c", color(d));
-    b.setAttribute("aria-label", `${name}: ${label(d)}`);
-    b.innerHTML = `<span class="full"></span><span class="ab"></span><span class="dir">${d === "B" ? "±" : label(d)}</span>`;
-    b.querySelector(".full").textContent = name;
-    b.querySelector(".ab").textContent = CHARS[name][0];
+    b.setAttribute("aria-label", `${name}: ${d === "B" ? "dipende" : label(d)}`);
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = name;
+    const dir = document.createElement("span"); dir.className = "dir";
+    dir.innerHTML = `<b>${label(d)}</b><i>${input(d)}</i>`;
+    b.append(picEl(name, "pic"), nm, dir);
     b.onclick = () => clickSlot(r, c);
-    cssEl.appendChild(b);
+    cssEl.append(b);
   }));
-  if (q.value.trim() && m.length === 1 && current !== m[0]) show(m[0], true);
+  if (searching && m.length === 1 && current !== m[0]) show(m[0], true);
 }
 
 function clickSlot(r, c) {
@@ -267,23 +300,22 @@ function clickSlot(r, c) {
   if (!swapFirst) { swapFirst = [r, c]; renderGrid(); return; }
   const [r0, c0] = swapFirst;
   [grid[r0][c0], grid[r][c]] = [grid[r][c], grid[r0][c0]];
-  swapFirst = null; store.set("ss-grid", grid); renderGrid();
+  swapFirst = null; store.set("ss-grid2", grid); renderGrid();
 }
 
 function show(name, quiet) {
   current = name;
   const d = dirOf(name);
   result.style.setProperty("--c", color(d));
-  const ov = overrides[name];
   result.innerHTML = `
-    <div class="arrow">${input(d)}</div>
-    <div class="name"></div>
-    <div class="dirl">${label(d)}<small>${inputText(d)} (${side.toUpperCase()})</small></div>
+    <div class="top"><span class="face"></span><div class="name"></div></div>
+    <div class="big"><span class="arrow">${input(d)}</span><span><span class="lbl">${d === "B" ? "SSL / SSR" : label(d)}</span><small>${inputText(d)} (${side.toUpperCase()})</small></span></div>
     <div class="note"></div>
     <div class="tools">
       <button class="chip" id="flip" type="button">Inverti per me</button>
-      ${ov ? '<button class="chip" id="reset" type="button">Ripristina</button><span class="edited">· modificato da te</span>' : ""}
+      ${overrides[name] ? '<button class="chip" id="reset" type="button">Ripristina</button><span class="edited">modificato da te</span>' : ""}
     </div>`;
+  result.querySelector(".face").replaceWith(picEl(name, "face"));
   result.querySelector(".name").textContent = name;
   result.querySelector(".note").textContent = CHARS[name][2] || "Lato debole generale: sidesteppa dopo una mossa che ti lascia a +.";
   $("flip").onclick = () => {
@@ -310,9 +342,10 @@ $("p2").onclick = () => setSide("p2");
 $("swapBtn").onclick = () => {
   swapMode = !swapMode; swapFirst = null;
   $("swapBtn").setAttribute("aria-pressed", swapMode);
-  $("swapHint").hidden = !swapMode; renderGrid();
+  $("swapHint").hidden = !swapMode; $("resetGrid").hidden = !swapMode;
+  renderGrid();
 };
-$("resetGrid").onclick = () => { grid = DEFAULT_GRID.map(r => r.slice()); store.set("ss-grid", null); swapFirst = null; renderGrid(); };
+$("resetGrid").onclick = () => { grid = DEFAULT_GRID.map(r => r.slice()); store.set("ss-grid2", null); swapFirst = null; renderGrid(); };
 
 q.addEventListener("input", renderGrid);
 q.addEventListener("keydown", e => {
@@ -322,9 +355,8 @@ q.addEventListener("keydown", e => {
 });
 
 const last = store.get("ss-last", "");
-side = store.get("ss-side", "p1");
+current = CHARS[last] ? last : "Kazuya";
 setSide(side);
-show(CHARS[last] ? last : "Kazuya", true);
 q.focus();
 </script>
 </body>
