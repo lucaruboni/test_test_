@@ -56,6 +56,7 @@ body {
 }
 .slot .dir b { font: 700 min(24cqw, 9cqh)/1 var(--display); letter-spacing: .02em; }
 .slot .dir i { font: 700 min(52cqw, 18cqh)/1 var(--display); font-style: normal; }
+.slot .dir u { text-decoration: none; font: 700 min(15cqw, 6cqh)/1 var(--display); color: var(--fg); opacity: .85; white-space: nowrap; }
 .slot.dlc { border-style: dashed; }
 .slot.rand { cursor: default; display: grid; place-items: center; color: var(--muted); background: #161926; }
 .slot.rand span { font: 700 40cqw/1 var(--display); }
@@ -84,6 +85,7 @@ h1 span { color: var(--muted); font-weight: 500; }
 #result .big .lbl { font: 700 34px/1 var(--display); }
 #result .big small { display: block; font: 600 13px/1.3 var(--body); color: var(--fg); margin-top: 4px; }
 #result .note { color: var(--muted); }
+#result .tb { font-size: 14px; } #result .tb b { font: 700 18px var(--display); color: var(--fg); }
 .tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .chip { font: 600 12.5px var(--body); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
 .chip:hover, .chip:focus-visible { border-color: var(--fg); outline: none; }
@@ -130,6 +132,7 @@ footer a { color: var(--fg); }
       <span><b style="color:var(--ssr)">SSR</b> destro</span>
       <span><b style="color:var(--both)">±</b> dipende</span>
       <span>tratteggio = DLC</span>
+      <span><b style="color:var(--fg)">1,2,1+2</b> throw break</span>
     </div>
     <div class="tools">
       <button class="chip" id="swapBtn" type="button" aria-pressed="false">Sposta personaggi</button>
@@ -138,59 +141,59 @@ footer a { color: var(--fg); }
     <p class="hint" id="swapHint" hidden>Tocca due caselle per scambiarle. Premi di nuovo “Sposta personaggi” per finire.</p>
     <footer>
       <span>Tasti: scrivi per evidenziare, <b>Invio</b> apre il primo, <b>Esc</b> svuota, <b>Tab</b> cambia lato. La freccia è il tasto da premere due volte sul tuo lato.</span>
-      <span>Dati sidestep: chart della community (TekkenDocs, via <a href="https://note.com/dkhksdkidksh/n/nb297891d3b7f" target="_blank" rel="noopener">note.com</a>; <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3298785870" target="_blank" rel="noopener">guida Steam</a>). Lato debole generale: molte mosse tracciano comunque.</span>
+      <span>Dati sidestep e throw break: chart di @mezerdie (Season 3). È il lato debole generale: alcune mosse tracciano comunque.</span>
     </footer>
   </aside>
 </div>
 
 <script>
-// [sigla, direzione, nota, immagine]. Direzione: "L" = SSL, "R" = SSR, "B" = dipende / nessun dato.
-const NEW = "Personaggio nuovo: non è nel chart di riferimento. Imposta tu la direzione con “Inverti per me”.";
+// [sigla, direzione, nota, immagine, throw break]. Direzione: "L" = SSL, "R" = SSR, "B" = dipende / nessun dato. Fonte: chart di @mezerdie.
+const NEW = "Non ancora nel chart: imposta tu la direzione con “Inverti per me”.";
 const CHARS = {
-  "Alisa": ["ALI", "R", "Alcuni giocatori preferiscono SSL.", "alisa"],
-  "Anna": ["ANN", "R", "", "anna"],
-  "Armor King": ["AK", "L", "", "armorking"],
-  "Asuka": ["ASU", "R", "", "asuka"],
-  "Azucena": ["AZU", "L", "", "azucena"],
-  "Bob": ["BOB", "B", NEW, null],
-  "Bryan": ["BRY", "R", "", "bryan"],
-  "Claudio": ["CLA", "L", "", "claudio"],
-  "Clive": ["CLI", "R", "SSR, e side-roll a sinistra funziona spesso.", "clive"],
-  "Devil Jin": ["DJ", "L", "Discusso: alcuni dicono che molte mosse tracciano SSL e preferiscono SSR.", "deviljin"],
-  "Dragunov": ["DRA", "R", "", "dragunov"],
-  "Eddy": ["EDD", "R", "", "eddy"],
-  "Fahkumram": ["FAH", "R", "", "fahkumram"],
-  "Feng": ["FEN", "L", "", "feng"],
-  "Heihachi": ["HEI", "L", "Discusso: parte della community indica SSR contro molte sue mosse.", "heihachi"],
-  "Hwoarang": ["HWO", "B", "Dipende dallo stance: SSL quando NON è in stance (flamingo).", "hwoarang"],
-  "Jack-8": ["JAC", "L", "", "jack8"],
-  "Jin": ["JIN", "R", "", "jin"],
-  "Jun": ["JUN", "R", "", "jun"],
-  "Kazuya": ["KAZ", "L", "", "kazuya"],
-  "King": ["KIN", "R", "", "king"],
-  "Kuma": ["KUM", "R", "Hitbox enorme: traccia bene da entrambi i lati, il timing conta.", "kuma"],
-  "Kunimitsu": ["KUN", "B", NEW, "kunimitsu"],
-  "Lars": ["LAR", "R", "Attenzione ai heat smash mid/low.", "lars"],
-  "Law": ["LAW", "R", "", "law"],
-  "Lee": ["LEE", "B", "Non è nel chart di riferimento: imposta tu la direzione con “Inverti per me”.", "lee"],
-  "Leo": ["LEO", "R", "", "leo"],
-  "Leroy": ["LER", "L", "", "leroy"],
-  "Lidia": ["LID", "R", "Discusso: alcuni chart indicano SSL.", "lidia"],
-  "Lili": ["LIL", "L", "", "lili"],
-  "Miary Zo": ["MIA", "L", "", "miaryzo"],
-  "Nina": ["NIN", "R", "", "nina"],
-  "Panda": ["PAN", "R", "", "panda"],
-  "Paul": ["PAU", "R", "", "paul"],
-  "Raven": ["RAV", "L", "", "raven"],
-  "Reina": ["REI", "R", "", "reina"],
-  "Roger Jr.": ["ROG", "B", NEW, null],
-  "Shaheen": ["SHA", "R", "", "shaheen"],
-  "Steve": ["STE", "L", "", "steve"],
-  "Victor": ["VIC", "R", "", "victor"],
-  "Xiaoyu": ["XIA", "R", "", "xiaoyu"],
-  "Yoshimitsu": ["YOS", "L", "", "yoshimitsu"],
-  "Yujiro Hanma": ["YUJ", "B", NEW, "yujiro"],
-  "Zafina": ["ZAF", "L", "", "zafina"],
+  "Alisa": ["ALI", "R", "", "alisa", "1+2"],
+  "Anna": ["ANN", "R", "", "anna", "1+2"],
+  "Armor King": ["AK", "R", "", "armorking", "1,2,1+2"],
+  "Asuka": ["ASU", "R", "", "asuka", "2,1+2"],
+  "Azucena": ["AZU", "L", "", "azucena", "1+2"],
+  "Bob": ["BOB", "B", NEW, null, ""],
+  "Bryan": ["BRY", "R", "", "bryan", "1+2"],
+  "Claudio": ["CLA", "L", "", "claudio", "1+2"],
+  "Clive": ["CLI", "R", "SSR, e side-roll a sinistra funziona spesso.", "clive", "1+2"],
+  "Devil Jin": ["DJ", "L", "", "deviljin", "1,2,1+2"],
+  "Dragunov": ["DRA", "R", "", "dragunov", "1,2,1+2"],
+  "Eddy": ["EDD", "R", "", "eddy", "1+2"],
+  "Fahkumram": ["FAH", "R", "", "fahkumram", "1+2"],
+  "Feng": ["FEN", "L", "", "feng", "1+2"],
+  "Heihachi": ["HEI", "L", "", "heihachi", "1+2"],
+  "Hwoarang": ["HWO", "B", "SSC: di solito le sue mosse si evitano sidesteppando dal lato opposto a dove punta il petto (dipende dallo stance).", "hwoarang", "1,2,1+2"],
+  "Jack-8": ["JAC", "L", "", "jack8", "1,2,1+2"],
+  "Jin": ["JIN", "R", "", "jin", "1,2,1+2"],
+  "Jun": ["JUN", "R", "", "jun", "2,1+2"],
+  "Kazuya": ["KAZ", "L", "", "kazuya", "1+2"],
+  "King": ["KIN", "R", "", "king", "1,2,1+2"],
+  "Kuma": ["KUM", "R", "Hitbox enorme: il timing conta.", "kuma", "1+2"],
+  "Kunimitsu": ["KUN", "R", "", "kunimitsu", "1,1+2"],
+  "Lars": ["LAR", "R", "", "lars", "1+2"],
+  "Law": ["LAW", "R", "", "law", "1,1+2"],
+  "Lee": ["LEE", "L", "", "lee", "1+2"],
+  "Leo": ["LEO", "R", "", "leo", "1+2"],
+  "Leroy": ["LER", "L", "", "leroy", "1+2"],
+  "Lidia": ["LID", "R", "", "lidia", "1+2"],
+  "Lili": ["LIL", "L", "", "lili", "1+2"],
+  "Miary Zo": ["MIA", "L", "", "miaryzo", "1+2"],
+  "Nina": ["NIN", "R", "", "nina", "1,2,1+2"],
+  "Panda": ["PAN", "R", "", "panda", "1+2"],
+  "Paul": ["PAU", "R", "", "paul", "1,2,1+2"],
+  "Raven": ["RAV", "L", "", "raven", "1,1+2"],
+  "Reina": ["REI", "L", "", "reina", "2,1+2"],
+  "Roger Jr.": ["ROG", "B", NEW, null, ""],
+  "Shaheen": ["SHA", "R", "", "shaheen", "1+2"],
+  "Steve": ["STE", "L", "", "steve", "2,1+2"],
+  "Victor": ["VIC", "R", "", "victor", "1+2"],
+  "Xiaoyu": ["XIA", "L", "", "xiaoyu", "2,1+2"],
+  "Yoshimitsu": ["YOS", "L", "", "yoshimitsu", "1+2"],
+  "Yujiro Hanma": ["YUJ", "B", NEW, "yujiro", ""],
+  "Zafina": ["ZAF", "L", "", "zafina", "1+2"],
 };
 const DLC = new Set(["Eddy", "Lidia", "Heihachi", "Clive", "Anna", "Fahkumram", "Armor King", "Miary Zo", "Kunimitsu", "Bob", "Roger Jr.", "Yujiro Hanma"]);
 // 15 colonne: 2 colonne DLC a sinistra, le 11 colonne base, 2 colonne DLC a destra. "?" = Random.
@@ -286,7 +289,7 @@ function renderGrid() {
     b.setAttribute("aria-label", `${name}: ${d === "B" ? "dipende" : label(d)}`);
     const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = name;
     const dir = document.createElement("span"); dir.className = "dir";
-    dir.innerHTML = `<b>${label(d)}</b><i>${input(d)}</i>`;
+    dir.innerHTML = `<b>${label(d)}</b><i>${input(d)}</i>` + (CHARS[name][4] ? `<u>${CHARS[name][4]}</u>` : "");
     b.append(picEl(name, "pic"), nm, dir);
     b.onclick = () => clickSlot(r, c);
     cssEl.append(b);
@@ -310,6 +313,7 @@ function show(name, quiet) {
   result.innerHTML = `
     <div class="top"><span class="face"></span><div class="name"></div></div>
     <div class="big"><span class="arrow">${input(d)}</span><span><span class="lbl">${d === "B" ? "SSL / SSR" : label(d)}</span><small>${inputText(d)} (${side.toUpperCase()})</small></span></div>
+    <div class="tb"></div>
     <div class="note"></div>
     <div class="tools">
       <button class="chip" id="flip" type="button">Inverti per me</button>
@@ -317,6 +321,7 @@ function show(name, quiet) {
     </div>`;
   result.querySelector(".face").replaceWith(picEl(name, "face"));
   result.querySelector(".name").textContent = name;
+  result.querySelector(".tb").innerHTML = CHARS[name][4] ? `Throw break: <b>${CHARS[name][4]}</b>` : "Throw break: nessun dato";
   result.querySelector(".note").textContent = CHARS[name][2] || "Lato debole generale: sidesteppa dopo una mossa che ti lascia a +.";
   $("flip").onclick = () => {
     const cur = dirOf(name);
