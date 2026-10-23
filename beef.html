@@ -1,4 +1,4 @@
-<title>Beef Board T8</title>
+<title>Beef Board</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -129,8 +129,8 @@ tr.isme td { font-weight: 600; }
 <div class="wrap">
   <header>
     <div>
-      <h1>Beef <span class="vs">Board</span> <span>T8</span></h1>
-      <p class="sub">Un set conta solo quando <b>tutti e due</b> i giocatori lo confermano con lo stesso punteggio. Ognuno può scrivere solo i propri resoconti, quindi nessuno può confermare al posto dell'altro.</p>
+      <h1>Beef <span class="vs">Board</span></h1>
+      <p class="sub">Tekken, Street Fighter o qualsiasi picchiaduro. Un set conta solo quando <b>tutti e due</b> i giocatori lo confermano con lo stesso punteggio. Ognuno può scrivere solo i propri resoconti, quindi nessuno può confermare al posto dell'altro.</p>
     </div>
     <div class="me" id="meBox" hidden>
       <label for="tag">Il tuo nome in gioco</label>
@@ -139,6 +139,8 @@ tr.isme td { font-weight: 600; }
   </header>
 
   <div id="banner" class="banner" hidden></div>
+
+  <div class="chips" id="games" role="group" aria-label="Filtra per gioco"></div>
 
   <div class="cols">
     <div class="col">
@@ -173,6 +175,10 @@ tr.isme td { font-weight: 600; }
             <div class="results" id="oppResults"></div>
             <div class="hint">Scelto: <span class="picked" id="oppPicked">nessuno</span></div>
           </div>
+          <label class="field">
+            <span>Gioco</span>
+            <input id="game" type="text" list="gameList" maxlength="40" value="Tekken 8">
+          </label>
           <div class="field">
             <span>Formato</span>
             <select id="ft">
@@ -213,6 +219,12 @@ tr.isme td { font-weight: 600; }
 </div>
 <div id="toast" hidden></div>
 
+<datalist id="gameList">
+  <option>Tekken 8</option><option>Street Fighter 6</option><option>Guilty Gear Strive</option><option>Mortal Kombat 1</option><option>2XKO</option><option>Fatal Fury: City of the Wolves</option><option>Tekken 7</option><option>Street Fighter III: 3rd Strike</option><option>Super Smash Bros. Ultimate</option>
+</datalist>
+<datalist id="charsSF6">
+  <option>A.K.I.</option><option>Akuma</option><option>Alex</option><option>Blanka</option><option>C. Viper</option><option>Cammy</option><option>Chun-Li</option><option>Dee Jay</option><option>Dhalsim</option><option>E. Honda</option><option>Ed</option><option>Elena</option><option>Guile</option><option>Jamie</option><option>JP</option><option>Juri</option><option>Ken</option><option>Kimberly</option><option>Lily</option><option>Luke</option><option>M. Bison</option><option>Mai</option><option>Manon</option><option>Marisa</option><option>Rashid</option><option>Ryu</option><option>Sagat</option><option>Terry</option><option>Zangief</option>
+</datalist>
 <datalist id="chars">
   <option>Akuma</option><option>Alisa</option><option>Anna</option><option>Armor King</option><option>Asuka</option><option>Azucena</option><option>Bryan</option><option>Claudio</option><option>Clive</option><option>Devil Jin</option><option>Dragunov</option><option>Eddy</option><option>Fahkumram</option><option>Feng</option><option>Heihachi</option><option>Hwoarang</option><option>Jack-8</option><option>Jin</option><option>Jun</option><option>Kazuya</option><option>King</option><option>Kuma</option><option>Lars</option><option>Law</option><option>Lee</option><option>Leo</option><option>Leroy</option><option>Lidia</option><option>Lili</option><option>Miary Zo</option><option>Nina</option><option>Panda</option><option>Paul</option><option>Raven</option><option>Reina</option><option>Shaheen</option><option>Steve</option><option>Victor</option><option>Xiaoyu</option><option>Yoshimitsu</option><option>Zafina</option>
 </datalist>
@@ -222,7 +234,7 @@ tr.isme td { font-weight: 600; }
 // Ognuno scrive solo il proprio documento (regola db reports/{self}).
 // Un set = resoconto di chi lo registra (by === autore) + eventuale risposta dell'avversario indicato.
 const $ = id => document.getElementById(id);
-let db = null, user = null, myId = null;
+let db = null, user = null, myId = null, gameFilter = "all";
 let docs = {}, names = {}, sets = [], filter = "all", oppId = null;
 let writable = false, writing = Promise.resolve();
 
@@ -253,6 +265,8 @@ function validScore(a, b, ft) {
   return isInt(a) && isInt(b) && isInt(ft) && ft >= 1 && ft <= 50 && Math.max(a, b) === ft && Math.min(a, b) < ft;
 }
 
+const gameOf = r => (typeof r.game === "string" && r.game.trim()) ? r.game.trim().slice(0, 40) : "Tekken 8";
+
 function buildSets() {
   const groups = {};
   for (const [uid, d] of Object.entries(docs)) {
@@ -274,10 +288,10 @@ function buildSets() {
     let status;
     if (!B) status = A.withdrawn ? "withdrawn" : "pending";
     else {
-      const mirror = B.me === A.them && B.them === A.me && B.ft === A.ft;
+      const mirror = B.me === A.them && B.them === A.me && B.ft === A.ft && gameOf(B) === gameOf(A);
       status = (!B.disputed && !A.withdrawn && !B.withdrawn && mirror) ? "confirmed" : "disputed";
     }
-    out.push({ key: a + "|" + A.id, id: A.id, a, b, A, B, status, at: A.at || 0 });
+    out.push({ key: a + "|" + A.id, id: A.id, a, b, A, B, status, game: gameOf(A), at: A.at || 0 });
   }
   return out.sort((x, y) => y.at - x.at);
 }
@@ -307,7 +321,7 @@ function setCard(s, opts = {}) {
   c.append(left, sc, right);
 
   const meta = el("div", "meta");
-  meta.append(el("span", "st " + s.status, statusLabel[s.status]), el("span", "ft", "FT" + s.A.ft), el("span", "", ago(s.at)));
+  meta.append(el("span", "st " + s.status, statusLabel[s.status]), el("span", "", s.game), el("span", "ft", "FT" + s.A.ft), el("span", "", ago(s.at)));
   if (s.status === "pending") meta.append(el("span", "", "· aspetta la conferma di " + nameOf(s.b)));
   if (s.status === "disputed" && s.B && s.B.disputed && validScore(s.B.me, s.B.them, s.B.ft)) {
     meta.append(el("span", "", `· secondo ${nameOf(s.b)}: ${s.B.them} – ${s.B.me}`));
@@ -355,7 +369,7 @@ function openDispute(card, s) {
 
 function reply(s, disputed, claim, note) {
   const rec = {
-    id: s.id, by: s.a, opp: s.a, ft: s.A.ft,
+    id: s.id, by: s.a, opp: s.a, game: s.game, ft: s.A.ft,
     me: claim ? claim.me : s.A.them, them: claim ? claim.them : s.A.me,
     myChar: s.A.oppChar || "", oppChar: s.A.myChar || "", at: Date.now(),
   };
@@ -376,20 +390,33 @@ function saveMine(mutate, done) {
 }
 
 function render() {
-  // Da confermare
-  const todo = sets.filter(s => s.b === myId && !s.B && s.status === "pending");
+  // Filtro gioco
+  const games = [...new Set(sets.map(s => s.game))].sort();
+  if (gameFilter !== "all" && !games.includes(gameFilter)) gameFilter = "all";
+  $("games").hidden = games.length < 2;
+  $("games").replaceChildren(...["all", ...games].map(g => {
+    const b = el("button", "chip", g === "all" ? "Tutti i giochi" : g); b.type = "button";
+    b.setAttribute("aria-pressed", String(g === gameFilter));
+    b.onclick = () => { gameFilter = g; render(); };
+    return b;
+  }));
+  const allSets = sets;
+  const sets_ = gameFilter === "all" ? allSets : allSets.filter(s => s.game === gameFilter);
+
+  // Da confermare (sempre tutti i giochi)
+  const todo = allSets.filter(s => s.b === myId && !s.B && s.status === "pending");
   $("todoCard").hidden = !todo.length;
   $("todo").replaceChildren(...todo.map(s => setCard(s, { actions: true })));
 
   // Storico
-  const list = sets.filter(s => filter === "all" || s.status === filter || (filter === "disputed" && s.status === "withdrawn"));
+  const list = sets_.filter(s => filter === "all" || s.status === filter || (filter === "disputed" && s.status === "withdrawn"));
   if (!list.length) {
-    const p = el("p", "empty", sets.length ? "Nessun set con questo stato." : "Nessun set registrato. Registra il primo dal modulo qui accanto: l'avversario dovrà confermarlo.");
+    const p = el("p", "empty", sets_.length ? "Nessun set con questo stato." : "Nessun set registrato. Registra il primo dal modulo qui accanto: l'avversario dovrà confermarlo.");
     $("feed").replaceChildren(p);
   } else $("feed").replaceChildren(...list.map(s => setCard(s, { actions: true })));
 
   // Classifica
-  const conf = sets.filter(s => s.status === "confirmed");
+  const conf = sets_.filter(s => s.status === "confirmed");
   const st = {};
   const get = id => (st[id] ||= { id, sw: 0, sl: 0, gw: 0, gl: 0 });
   for (const s of conf) {
@@ -414,7 +441,7 @@ function render() {
 
   // Rivalità
   const pairs = {};
-  for (const s of sets) {
+  for (const s of sets_) {
     if (s.status === "withdrawn") continue;
     const [x, y] = [s.a, s.b].sort();
     const p = (pairs[x + "|" + y] ||= { x, y, wx: 0, wy: 0, open: 0, n: 0 });
@@ -479,6 +506,12 @@ $("filters").addEventListener("click", e => {
   $("filters").querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   render();
 });
+function syncCharList() {
+  const g = $("game").value.trim().toLowerCase();
+  const list = g.includes("street fighter 6") || g === "sf6" ? "charsSF6" : g.includes("tekken") ? "chars" : "";
+  ["cMe", "cThem"].forEach(id => list ? $(id).setAttribute("list", list) : $(id).removeAttribute("list"));
+}
+$("game").addEventListener("input", syncCharList);
 $("ft").addEventListener("change", () => { $("sMe").value = $("ft").value; });
 $("tag").addEventListener("change", () => {
   const v = $("tag").value.trim().slice(0, 24);
@@ -494,7 +527,8 @@ $("setForm").addEventListener("submit", e => {
   err.textContent = msg; err.hidden = !msg;
   if (msg) return;
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const rec = { id, by: myId, opp: oppId, ft, me, them, myChar: $("cMe").value.trim().slice(0, 24), oppChar: $("cThem").value.trim().slice(0, 24), at: Date.now() };
+  const game = ($("game").value.trim() || "Tekken 8").slice(0, 40);
+  const rec = { id, by: myId, opp: oppId, game, ft, me, them, myChar: $("cMe").value.trim().slice(0, 24), oppChar: $("cThem").value.trim().slice(0, 24), at: Date.now() };
   const note = $("note").value.trim().slice(0, 140);
   if (note) rec.note = note;
   saveMine(cur => { cur.sets[myId + "|" + id] = rec; }, "Set registrato: ora deve confermarlo " + nameOf(oppId)).then(() => {
