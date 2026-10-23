@@ -15,6 +15,7 @@
   --wait: #b7790d;
   --bad: #c2410c;
   --ok-bg: #e3f4ea; --wait-bg: #fbf1dc; --bad-bg: #fde8dd;
+  --veil: rgba(243, 244, 247, .86);
   --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -22,15 +23,16 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e1016; --panel: #171a23; --line: #2a2f3d; --fg: #eceef4; --muted: #949bad;
   --p1: #ff5468; --p2: #5b8cff; --ok: #4cc983; --wait: #f0b53c; --bad: #ff7a45;
-  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; color-scheme: dark;
+  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; --veil: rgba(14, 16, 22, .74); color-scheme: dark;
 } }
 :root[data-theme="dark"] {
   --bg: #0e1016; --panel: #171a23; --line: #2a2f3d; --fg: #eceef4; --muted: #949bad;
   --p1: #ff5468; --p2: #5b8cff; --ok: #4cc983; --wait: #f0b53c; --bad: #ff7a45;
-  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; color-scheme: dark;
+  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; --veil: rgba(14, 16, 22, .74); color-scheme: dark;
 }
 body {
-  background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  background: linear-gradient(var(--veil), var(--veil)), url("img/bg-t8.jpg") center top / cover fixed, var(--bg);
+  color: var(--fg); font: 15px/1.5 var(--body); min-height: 100vh;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -103,6 +105,8 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 th { text-align: left; font: 600 12px var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
 td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
 td.n, th.n { text-align: right; }
+a.prof { font-size: 12px; font-weight: 600; color: var(--p2); text-decoration: none; white-space: nowrap; }
+a.prof:hover { text-decoration: underline; }
 td.pos { font: 700 15px var(--display); color: var(--muted); width: 1.5em; }
 tr.isme td { font-weight: 600; }
 
@@ -187,6 +191,8 @@ tr.isme td { font-weight: 600; }
     <div class="me" id="meBox" hidden>
       <label for="tag">Il tuo nome in gioco</label>
       <input id="tag" type="text" maxlength="24" placeholder="es. KazuMain" style="width:12em">
+      <label for="tid">TEKKEN ID</label>
+      <input id="tid" type="text" maxlength="16" placeholder="xxxx-xxxx-xxxx" style="width:10em" autocomplete="off">
     </div>
   </header>
 
@@ -368,6 +374,21 @@ function errMsg(e) {
   if (e && e.code === "quota_exceeded") return "Spazio dati esaurito: il proprietario deve fare pulizia.";
   return "Salvataggio non riuscito, riprova tra poco.";
 }
+// TEKKEN ID: 12 caratteri, mostrato in gioco come xxxx-xxxx-xxxx
+const normTid = v => typeof v === "string" ? v.replace(/[^A-Za-z0-9]/g, "") : "";
+const tidOf = id => { const t = normTid(docs[id] && docs[id].tekkenId); return /^[A-Za-z0-9]{12}$/.test(t) ? t : ""; };
+function nameCell(id) {
+  const td = el("td", "", nameOf(id));
+  const t = tidOf(id);
+  if (t) {
+    const a = el("a", "prof", "profilo ↗");
+    a.href = "https://wank.wavu.wiki/player/" + t; a.target = "_blank"; a.rel = "noopener";
+    a.title = "Statistiche online di questo TEKKEN ID su Wavu Wank";
+    td.append(" ", a);
+  }
+  return td;
+}
+
 function nameOf(id) {
   const tag = docs[id] && typeof docs[id].tag === "string" ? docs[id].tag.trim() : "";
   return tag || (names[id] && names[id].name) || (id === myId ? "Tu" : "Giocatore");
@@ -552,7 +573,7 @@ function render() {
     const tb = el("tbody");
     rows.forEach((r, i) => {
       const tr = el("tr", r.id === myId ? "isme" : "");
-      tr.append(el("td", "pos", String(i + 1)), el("td", "", nameOf(r.id)),
+      tr.append(el("td", "pos", String(i + 1)), nameCell(r.id),
         el("td", "n", r.sw + "–" + r.sl), el("td", "n", r.gw + "–" + r.gl));
       tb.append(tr);
     });
@@ -602,6 +623,8 @@ function render() {
   // Il mio nome
   const tagEl = $("tag");
   if (document.activeElement !== tagEl) tagEl.value = (docs[myId] && docs[myId].tag) || "";
+  const t = tidOf(myId);
+  if (document.activeElement !== $("tid")) $("tid").value = t ? t.match(/.{4}/g).join("-") : "";
   renderLive();
 }
 
@@ -641,6 +664,11 @@ $("ft").addEventListener("change", () => { $("sMe").value = $("ft").value; });
 $("tag").addEventListener("change", () => {
   const v = $("tag").value.trim().slice(0, 24);
   if (writable) saveMine(cur => { cur.tag = v; }, "Nome salvato");
+});
+$("tid").addEventListener("change", () => {
+  const t = normTid($("tid").value);
+  if (t && t.length !== 12) { toast("Il TEKKEN ID ha 12 caratteri: lo trovi nel tuo profilo in gioco."); return; }
+  if (writable) saveMine(cur => { cur.tekkenId = t; }, t ? "TEKKEN ID salvato" : "TEKKEN ID rimosso");
 });
 $("setForm").addEventListener("submit", e => {
   e.preventDefault();
