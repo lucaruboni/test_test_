@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sidestep T8</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: barra di ricerca fissa in alto, griglia di personaggi già colorata per direzione, pannello risultato grande. Single dark look (schermata di caricamento). */
+:root {
+  --bg: #0d0f14;
+  --panel: #171a22;
+  --line: #2a2f3c;
+  --fg: #eef0f5;
+  --muted: #8d93a3;
+  --ssl: #3fb6ff;   /* sidestep left */
+  --ssr: #ff9d2e;   /* sidestep right */
+  --both: #b48cff;
+  --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; padding-block: 12px 32px; }
+
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: grid; gap: 10px; padding-block: 8px;
+}
+.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+h1 { font: 700 20px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; margin: 0; flex: 1; }
+h1 span { color: var(--muted); font-weight: 500; }
+.side { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.side button {
+  font: 700 13px var(--display); letter-spacing: .06em; padding: 8px 12px; border: 0;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.side button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+#q {
+  width: 100%; box-sizing: border-box; font: 600 20px var(--body); padding: 12px 14px;
+  background: var(--panel); color: var(--fg); border: 2px solid var(--line); border-radius: 10px; outline: none;
+}
+#q:focus { border-color: var(--fg); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend b { font-family: var(--display); }
+
+/* Risultato */
+#result {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 20px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+  border-left: 8px solid var(--c, var(--line));
+}
+#result .arrow { grid-row: span 3; font: 700 84px/1 var(--display); color: var(--c); min-width: 1.1em; text-align: center; }
+#result .name { font: 700 26px/1.1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+#result .dir { font: 700 40px/1 var(--display); color: var(--c); letter-spacing: .04em; }
+#result .dir small { font-size: 16px; color: var(--fg); letter-spacing: 0; font-family: var(--body); font-weight: 600; margin-left: 8px; }
+#result .note { color: var(--muted); min-width: 0; }
+#result .tools { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.chip {
+  font: 600 13px var(--body); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+  background: transparent; color: var(--fg); cursor: pointer;
+}
+.chip:hover, .chip:focus-visible { border-color: var(--fg); outline: none; }
+.edited { color: var(--both); font-size: 12px; font-weight: 600; }
+
+/* Griglia */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tile {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 11px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+  color: var(--fg); font: 600 15px var(--body); text-align: left; cursor: pointer; min-width: 0;
+  border-left: 5px solid var(--c);
+}
+.tile:hover, .tile:focus-visible { border-color: var(--c); outline: none; }
+.tile.first { box-shadow: 0 0 0 2px var(--fg); }
+.tile .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .d { font: 700 14px var(--display); color: var(--c); flex: none; }
+.empty { color: var(--muted); padding: 12px 0; }
+footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 6px; max-width: 70ch; }
+footer a { color: var(--fg); }
+@media (max-width: 480px) {
+  #result .arrow { font-size: 64px; }
+  #result .dir { font-size: 32px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  #result.flash { animation: pop .18s ease-out; }
+  @keyframes pop { from { transform: scale(.98); opacity: .6; } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1>Sidestep <span>Tekken 8</span></h1>
+      <div class="side" role="group" aria-label="Il tuo lato">
+        <button id="p1" type="button" aria-pressed="true">P1 ◀</button>
+        <button id="p2" type="button" aria-pressed="false">▶ P2</button>
+      </div>
+    </div>
+    <input id="q" type="search" placeholder="Scrivi il nome… (Invio = primo risultato)" autocomplete="off" autofocus>
+    <div class="legend">
+      <span><b style="color:var(--ssl)">SSL</b> sidestep sinistro</span>
+      <span><b style="color:var(--ssr)">SSR</b> sidestep destro</span>
+      <span><b style="color:var(--both)">±</b> dipende</span>
+    </div>
+  </header>
+
+  <section id="result" aria-live="polite"></section>
+  <div id="grid" class="grid"></div>
+
+  <footer>
+    <span>Tasti: scrivi per filtrare, <b>Invio</b> apre il primo, <b>Esc</b> svuota, <b>Tab</b> cambia lato P1/P2. La freccia indica il tasto da premere due volte sul tuo lato.</span>
+    <span>Dati: chart della community (TekkenDocs “Universal Sidestep Counter Chart”, via <a href="https://note.com/dkhksdkidksh/n/nb297891d3b7f" target="_blank" rel="noopener">note.com</a>, e <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3298785870" target="_blank" rel="noopener">guida Steam</a>). È il lato debole <i>generale</i>: molte mosse tracciano comunque. Se non sei d'accordo, usa “Inverti” e la scelta resta salvata su questo dispositivo.</span>
+  </footer>
+</div>
+
+<script>
+// d: "L" = SSL, "R" = SSR, "B" = dipende
+const CHARS = [
+  ["Akuma", "B", "Non presente nel chart di riferimento: nessun dato affidabile, imposta tu la direzione con “Inverti”."],
+  ["Alisa", "R", "Alcuni giocatori preferiscono SSL."],
+  ["Anna", "R", ""],
+  ["Armor King", "L", ""],
+  ["Asuka", "R", ""],
+  ["Azucena", "L", ""],
+  ["Bryan", "R", ""],
+  ["Claudio", "L", ""],
+  ["Clive", "R", "SSR, e side-roll a sinistra funziona spesso."],
+  ["Devil Jin", "L", "Discusso: alcuni dicono che molte mosse tracciano SSL e preferiscono SSR."],
+  ["Dragunov", "R", ""],
+  ["Eddy", "R", ""],
+  ["Fahkumram", "R", ""],
+  ["Feng", "L", ""],
+  ["Heihachi", "L", "Discusso: parte della community indica SSR contro molte sue mosse."],
+  ["Hwoarang", "B", "Dipende dallo stance: SSL quando NON è in stance (flamingo)."],
+  ["Jack-8", "L", ""],
+  ["Jin", "R", ""],
+  ["Jun", "R", ""],
+  ["Kazuya", "L", ""],
+  ["King", "R", ""],
+  ["Kuma", "R", "Hitbox enorme: traccia bene da entrambi i lati, il timing conta."],
+  ["Lars", "R", "Attenzione ai heat smash mid/low."],
+  ["Law", "R", ""],
+  ["Lee", "B", "Non presente nel chart di riferimento: nessun dato affidabile, imposta tu la direzione con “Inverti”."],
+  ["Leo", "R", ""],
+  ["Leroy", "L", ""],
+  ["Lidia", "R", "Discusso: alcuni chart indicano SSL."],
+  ["Lili", "L", ""],
+  ["Miary Zo", "L", ""],
+  ["Nina", "R", ""],
+  ["Panda", "R", ""],
+  ["Paul", "R", ""],
+  ["Raven", "L", ""],
+  ["Reina", "R", ""],
+  ["Shaheen", "R", ""],
+  ["Steve", "L", ""],
+  ["Victor", "R", ""],
+  ["Xiaoyu", "R", ""],
+  ["Yoshimitsu", "L", ""],
+  ["Zafina", "L", ""],
+].map(([name, d, note]) => ({ name, d, note, key: name.toLowerCase().replace(/[^a-z0-9]/g, "") }));
+
+const ALIASES = { dj: "devil jin", jack: "jack-8", hei: "heihachi", ak: "armor king", hwo: "hwoarang", yoshi: "yoshimitsu", ling: "xiaoyu", drag: "dragunov", fahk: "fahkumram", miary: "miary zo" };
+
+const store = {
+  get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let overrides = store.get("ss-overrides", {});
+let side = store.get("ss-side", "p1");
+let current = null;
+
+const $ = id => document.getElementById(id);
+const q = $("q"), grid = $("grid"), result = $("result");
+
+const dirOf = c => overrides[c.name] || c.d;
+const color = d => d === "L" ? "var(--ssl)" : d === "R" ? "var(--ssr)" : "var(--both)";
+const label = d => d === "L" ? "SSL" : d === "R" ? "SSR" : "SSL / SSR";
+// Su P1 il personaggio guarda a destra: la sua sinistra è lo sfondo (↑). Su P2 è invertito.
+function input(d) {
+  if (d === "B") return "↕";
+  const up = (d === "L") === (side === "p1");
+  return up ? "↑" : "↓";
+}
+function inputText(d) {
+  if (d === "B") return "guarda lo stance";
+  return input(d) === "↑" ? "↑↑ verso lo sfondo" : "↓↓ verso lo schermo";
+}
+
+function matches(term) {
+  const t = term.toLowerCase().trim();
+  if (!t) return CHARS;
+  const alias = ALIASES[t.replace(/\s/g, "")];
+  const tk = t.replace(/[^a-z0-9]/g, "");
+  const starts = [], contains = [];
+  for (const c of CHARS) {
+    const words = c.name.toLowerCase().split(/[\s-]/);
+    if ((alias && c.name.toLowerCase() === alias) || c.key.startsWith(tk) || words.some(w => w.startsWith(t))) starts.push(c);
+    else if (c.key.includes(tk)) contains.push(c);
+  }
+  return [...starts, ...contains];
+}
+
+function renderGrid() {
+  const list = matches(q.value);
+  grid.innerHTML = "";
+  if (!list.length) { grid.innerHTML = '<div class="empty">Nessun personaggio trovato.</div>'; return list; }
+  list.forEach((c, i) => {
+    const d = dirOf(c);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tile" + (i === 0 && q.value.trim() ? " first" : "");
+    b.style.setProperty("--c", color(d));
+    b.innerHTML = `<span class="n"></span><span class="d">${label(d).replace(" / ", "/")} ${input(d)}</span>`;
+    b.querySelector(".n").textContent = c.name;
+    b.onclick = () => { show(c); };
+    grid.appendChild(b);
+  });
+  if (q.value.trim() && list.length === 1) show(list[0], true);
+  return list;
+}
+
+function show(c, quiet) {
+  current = c;
+  const d = dirOf(c);
+  result.hidden = false;
+  result.style.setProperty("--c", color(d));
+  const edited = overrides[c.name] ? '<span class="edited">· modificato da te</span>' : "";
+  result.innerHTML = `
+    <div class="arrow">${input(d)}</div>
+    <div class="name"></div>
+    <div class="dir">${label(d)}<small>${inputText(d)} (${side.toUpperCase()})</small></div>
+    <div class="note"></div>
+    <div class="tools">
+      <button class="chip" id="flip" type="button">Inverti per me</button>
+      ${overrides[c.name] ? '<button class="chip" id="reset" type="button">Ripristina</button>' : ""}
+      ${edited}
+    </div>`;
+  result.querySelector(".name").textContent = c.name;
+  result.querySelector(".note").textContent = c.note || "Lato debole generale: sidesteppa dopo una mossa che ti lascia a +.";
+  $("flip").onclick = () => {
+    const cur = dirOf(c);
+    const next = cur === "L" ? "R" : cur === "R" ? "B" : "L";
+    if (next === c.d) delete overrides[c.name]; else overrides[c.name] = next;
+    store.set("ss-overrides", overrides); renderGrid(); show(c);
+  };
+  const r = $("reset");
+  if (r) r.onclick = () => { delete overrides[c.name]; store.set("ss-overrides", overrides); renderGrid(); show(c); };
+  result.classList.remove("flash"); void result.offsetWidth; result.classList.add("flash");
+  if (!quiet) store.set("ss-last", c.name);
+}
+
+function setSide(s) {
+  side = s; store.set("ss-side", s);
+  $("p1").setAttribute("aria-pressed", s === "p1");
+  $("p2").setAttribute("aria-pressed", s === "p2");
+  renderGrid(); if (current) show(current, true);
+}
+$("p1").onclick = () => setSide("p1");
+$("p2").onclick = () => setSide("p2");
+
+q.addEventListener("input", renderGrid);
+q.addEventListener("keydown", e => {
+  if (e.key === "Enter") { const l = matches(q.value); if (l.length) { show(l[0]); q.select(); } }
+  else if (e.key === "Escape") { q.value = ""; renderGrid(); }
+  else if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); setSide(side === "p1" ? "p2" : "p1"); }
+});
+
+setSide(side);
+const last = CHARS.find(c => c.name === store.get("ss-last", "")) || CHARS.find(c => c.name === "Kazuya");
+show(last, true);
+q.focus();
+</script>
+</body>
+</html>
