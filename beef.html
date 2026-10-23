@@ -1,0 +1,525 @@
+<title>Beef Board T8</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: colonna principale (da confermare, storico) + colonna laterale (registra set, classifica, rivalità); su telefono tutto impilato. */
+:root {
+  --bg: #f3f4f7;
+  --panel: #ffffff;
+  --line: #dcdfe7;
+  --fg: #141821;
+  --muted: #5f6677;
+  --p1: #cf2338;     /* lato rosso */
+  --p2: #2459d6;     /* lato blu */
+  --ok: #1d8a4e;
+  --wait: #b7790d;
+  --bad: #c2410c;
+  --ok-bg: #e3f4ea; --wait-bg: #fbf1dc; --bad-bg: #fde8dd;
+  --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1016; --panel: #171a23; --line: #2a2f3d; --fg: #eceef4; --muted: #949bad;
+  --p1: #ff5468; --p2: #5b8cff; --ok: #4cc983; --wait: #f0b53c; --bad: #ff7a45;
+  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0e1016; --panel: #171a23; --line: #2a2f3d; --fg: #eceef4; --muted: #949bad;
+  --p1: #ff5468; --p2: #5b8cff; --ok: #4cc983; --wait: #f0b53c; --bad: #ff7a45;
+  --ok-bg: #13291d; --wait-bg: #2e2510; --bad-bg: #331a10; color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 20px 40px; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font: 700 30px/1 var(--display); text-transform: uppercase; letter-spacing: .03em; margin: 0; }
+h1 .vs { color: var(--p1); }
+h1 .vs + span { color: var(--p2); }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+h2 { font: 700 15px/1.2 var(--display); text-transform: uppercase; letter-spacing: .08em; margin: 0; color: var(--muted); }
+.me { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.me label { font-size: 13px; color: var(--muted); }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: grid; gap: 20px; min-width: 0; }
+@media (max-width: 820px) { .cols { grid-template-columns: minmax(0, 1fr); } .side { order: -1; } }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.card.alert { border-color: var(--wait); box-shadow: 0 0 0 1px var(--wait); }
+.banner { background: var(--wait-bg); color: var(--fg); border: 1px solid var(--wait); border-radius: 10px; padding: 10px 14px; }
+
+input, select, textarea, button { font: inherit; color: inherit; }
+input[type="text"], input[type="search"], input[type="number"], select, textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; width: 100%; box-sizing: border-box;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--p2); outline-offset: 1px; }
+.btn { border: 1px solid var(--fg); background: var(--fg); color: var(--bg); border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+.btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+.btn.bad { background: transparent; color: var(--bad); border-color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.score { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; }
+.score input { font: 700 26px var(--display); text-align: center; }
+.score .dash { font: 700 22px var(--display); color: var(--muted); padding-bottom: 8px; }
+.picked { font-weight: 600; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.err { font-size: 13px; color: var(--bad); margin: 0; }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 13.5px; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* Set */
+.sets { display: grid; gap: 8px; }
+.set { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.set .pl { min-width: 0; display: grid; gap: 2px; }
+.set .pl.r { text-align: right; }
+.set .nm { font-weight: 600; overflow-wrap: anywhere; }
+.set .ch { font-size: 12.5px; color: var(--muted); }
+.set .win .nm::after { content: " ▲"; color: var(--ok); font-size: 11px; }
+.set .sc { font: 700 26px/1 var(--display); font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+.set .sc .a { color: var(--p1); } .set .sc .b { color: var(--p2); }
+.set .meta { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--muted); }
+.set .acts { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.set.pending, .set.withdrawn { border-style: dashed; }
+.set.withdrawn .sc { color: var(--muted); text-decoration: line-through; }
+.set .note { grid-column: 1 / -1; font-size: 13.5px; overflow-wrap: anywhere; }
+.st { font: 700 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.st.confirmed { background: var(--ok-bg); color: var(--ok); }
+.st.pending { background: var(--wait-bg); color: var(--wait); }
+.st.disputed, .st.withdrawn { background: var(--bad-bg); color: var(--bad); }
+.ft { font-family: var(--mono); }
+
+/* Classifica */
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: left; font: 600 12px var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
+td.n, th.n { text-align: right; }
+td.pos { font: 700 15px var(--display); color: var(--muted); width: 1.5em; }
+tr.isme td { font-weight: 600; }
+
+/* Rivalità */
+.rival { display: grid; gap: 6px; }
+.rival .names { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.rival .names span { min-width: 0; overflow-wrap: anywhere; }
+.rival .names .b { text-align: right; }
+.bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); }
+.bar i { display: block; }
+.bar .a { background: var(--p1); } .bar .b { background: var(--p2); }
+.rival .nums { display: flex; justify-content: space-between; font: 700 18px var(--display); font-variant-numeric: tabular-nums; }
+.rival .nums .a { color: var(--p1); } .rival .nums .b { color: var(--p2); }
+.rival .nums small { font: 400 12.5px var(--body); color: var(--muted); align-self: center; }
+
+.empty { color: var(--muted); padding: 8px 0; margin: 0; }
+.results { display: grid; gap: 4px; }
+.results button { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.results img { width: 22px; height: 22px; border-radius: 50%; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; max-width: calc(100% - 32px); }
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Beef <span class="vs">Board</span> <span>T8</span></h1>
+      <p class="sub">Un set conta solo quando <b>tutti e due</b> i giocatori lo confermano con lo stesso punteggio. Ognuno può scrivere solo i propri resoconti, quindi nessuno può confermare al posto dell'altro.</p>
+    </div>
+    <div class="me" id="meBox" hidden>
+      <label for="tag">Il tuo nome in gioco</label>
+      <input id="tag" type="text" maxlength="24" placeholder="es. KazuMain" style="width:12em">
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="cols">
+    <div class="col">
+      <section class="card alert" id="todoCard" hidden>
+        <h2>Da confermare</h2>
+        <p class="hint">Questi set sono stati registrati contro di te. Conferma se il punteggio è giusto, altrimenti contestalo.</p>
+        <div class="sets" id="todo"></div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2>Storico set</h2>
+          <div class="chips" id="filters" role="group" aria-label="Filtra per stato">
+            <button class="chip" type="button" data-f="all" aria-pressed="true">Tutti</button>
+            <button class="chip" type="button" data-f="confirmed" aria-pressed="false">Confermati</button>
+            <button class="chip" type="button" data-f="pending" aria-pressed="false">In attesa</button>
+            <button class="chip" type="button" data-f="disputed" aria-pressed="false">Contestati</button>
+          </div>
+        </div>
+        <div class="sets" id="feed"><p class="empty">Caricamento dei set…</p></div>
+      </section>
+    </div>
+
+    <div class="col side">
+      <section class="card" id="formCard">
+        <h2>Registra un set</h2>
+        <form id="setForm" class="field" style="gap:12px" novalidate>
+          <div class="field">
+            <span>Avversario</span>
+            <div class="chips" id="known"></div>
+            <input id="oppSearch" type="search" placeholder="Cerca per nome…" autocomplete="off">
+            <div class="results" id="oppResults"></div>
+            <div class="hint">Scelto: <span class="picked" id="oppPicked">nessuno</span></div>
+          </div>
+          <div class="field">
+            <span>Formato</span>
+            <select id="ft">
+              <option value="2">FT2</option><option value="3" selected>FT3</option>
+              <option value="5">FT5</option><option value="7">FT7</option>
+              <option value="10">FT10</option><option value="20">FT20</option>
+            </select>
+          </div>
+          <div class="score">
+            <label class="field"><span>Io</span><input id="sMe" type="number" min="0" inputmode="numeric" value="3"></label>
+            <span class="dash">–</span>
+            <label class="field"><span>Avversario</span><input id="sThem" type="number" min="0" inputmode="numeric" value="0"></label>
+          </div>
+          <div class="grid2">
+            <label class="field"><span>Il mio personaggio</span><input id="cMe" type="text" list="chars" placeholder="facoltativo"></label>
+            <label class="field"><span>Il suo personaggio</span><input id="cThem" type="text" list="chars" placeholder="facoltativo"></label>
+          </div>
+          <label class="field"><span>Nota</span><input id="note" type="text" maxlength="140" placeholder="facoltativa, es. runback richiesto"></label>
+          <p class="err" id="formErr" hidden></p>
+          <button class="btn" type="submit" id="submitBtn">Registra e invia per conferma</button>
+          <p class="hint">Il set resta “in attesa” e non conta in classifica finché l'avversario non lo conferma.</p>
+        </form>
+        <p class="hint" id="readOnly" hidden>Accedi a claude.ai con un account che ha accesso come Contributor per registrare set. Puoi comunque vedere tutti i risultati.</p>
+      </section>
+
+      <section class="card">
+        <h2>Classifica</h2>
+        <p class="hint">Solo set confermati da entrambi.</p>
+        <div id="board" style="overflow-x:auto"><p class="empty">Nessun set confermato ancora.</p></div>
+      </section>
+
+      <section class="card">
+        <h2>Rivalità</h2>
+        <div class="sets" id="rivals"><p class="empty">Le rivalità appaiono dopo il primo set confermato.</p></div>
+      </section>
+    </div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<datalist id="chars">
+  <option>Akuma</option><option>Alisa</option><option>Anna</option><option>Armor King</option><option>Asuka</option><option>Azucena</option><option>Bryan</option><option>Claudio</option><option>Clive</option><option>Devil Jin</option><option>Dragunov</option><option>Eddy</option><option>Fahkumram</option><option>Feng</option><option>Heihachi</option><option>Hwoarang</option><option>Jack-8</option><option>Jin</option><option>Jun</option><option>Kazuya</option><option>King</option><option>Kuma</option><option>Lars</option><option>Law</option><option>Lee</option><option>Leo</option><option>Leroy</option><option>Lidia</option><option>Lili</option><option>Miary Zo</option><option>Nina</option><option>Panda</option><option>Paul</option><option>Raven</option><option>Reina</option><option>Shaheen</option><option>Steve</option><option>Victor</option><option>Xiaoyu</option><option>Yoshimitsu</option><option>Zafina</option>
+</datalist>
+
+<script>
+// Struttura dati: reports/<idGiocatore> = { tag, sets: { <chiave>: resoconto } }.
+// Ognuno scrive solo il proprio documento (regola db reports/{self}).
+// Un set = resoconto di chi lo registra (by === autore) + eventuale risposta dell'avversario indicato.
+const $ = id => document.getElementById(id);
+let db = null, user = null, myId = null;
+let docs = {}, names = {}, sets = [], filter = "all", oppId = null;
+let writable = false, writing = Promise.resolve();
+
+const statusLabel = { confirmed: "Confermato", pending: "In attesa", disputed: "Contestato", withdrawn: "Ritirato" };
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600);
+}
+function banner(msg) { const b = $("banner"); b.textContent = msg; b.hidden = !msg; }
+function errMsg(e) {
+  if (e && e.code === "invalid_argument") return "Non hai il permesso di scrivere qui: chiedi al proprietario l'accesso come Contributor.";
+  if (e && e.code === "quota_exceeded") return "Spazio dati esaurito: il proprietario deve fare pulizia.";
+  return "Salvataggio non riuscito, riprova tra poco.";
+}
+function nameOf(id) {
+  const tag = docs[id] && typeof docs[id].tag === "string" ? docs[id].tag.trim() : "";
+  return tag || (names[id] && names[id].name) || (id === myId ? "Tu" : "Giocatore");
+}
+function ago(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min fa";
+  if (s < 86400) return Math.round(s / 3600) + " h fa";
+  return Math.round(s / 86400) + " g fa";
+}
+const isInt = n => Number.isInteger(n) && n >= 0;
+function validScore(a, b, ft) {
+  return isInt(a) && isInt(b) && isInt(ft) && ft >= 1 && ft <= 50 && Math.max(a, b) === ft && Math.min(a, b) < ft;
+}
+
+function buildSets() {
+  const groups = {};
+  for (const [uid, d] of Object.entries(docs)) {
+    const recs = d && d.sets && typeof d.sets === "object" ? Object.values(d.sets) : [];
+    for (const r of recs) {
+      if (!r || typeof r.id !== "string" || typeof r.by !== "string") continue;
+      const k = r.by + "|" + r.id;
+      (groups[k] ||= {})[uid] = r;
+    }
+  }
+  const out = [];
+  for (const g of Object.values(groups)) {
+    const ra = Object.entries(g).find(([uid, r]) => uid === r.by);
+    if (!ra) continue;
+    const [a, A] = ra;
+    const b = A.opp;
+    if (typeof b !== "string" || b === a || !validScore(A.me, A.them, A.ft)) continue;
+    const B = g[b] && g[b].opp === a ? g[b] : null;
+    let status;
+    if (!B) status = A.withdrawn ? "withdrawn" : "pending";
+    else {
+      const mirror = B.me === A.them && B.them === A.me && B.ft === A.ft;
+      status = (!B.disputed && !A.withdrawn && !B.withdrawn && mirror) ? "confirmed" : "disputed";
+    }
+    out.push({ key: a + "|" + A.id, id: A.id, a, b, A, B, status, at: A.at || 0 });
+  }
+  return out.sort((x, y) => y.at - x.at);
+}
+
+async function refresh() {
+  sets = buildSets();
+  const ids = new Set(Object.keys(docs));
+  sets.forEach(s => { ids.add(s.a); ids.add(s.b); });
+  if (oppId) ids.add(oppId);
+  if (user && ids.size) names = await user.profiles([...ids]);
+  render();
+}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function setCard(s, opts = {}) {
+  const c = el("div", "set " + s.status);
+  const sa = s.A.me, sb = s.A.them;
+  const left = el("div", "pl" + (sa > sb ? " win" : ""));
+  left.append(el("span", "nm", nameOf(s.a)));
+  if (s.A.myChar) left.append(el("span", "ch", s.A.myChar));
+  const right = el("div", "pl r" + (sb > sa ? " win" : ""));
+  right.append(el("span", "nm", nameOf(s.b)));
+  if (s.A.oppChar) right.append(el("span", "ch", s.A.oppChar));
+  const sc = el("div", "sc");
+  sc.append(el("span", "a", String(sa)), document.createTextNode(" – "), el("span", "b", String(sb)));
+  c.append(left, sc, right);
+
+  const meta = el("div", "meta");
+  meta.append(el("span", "st " + s.status, statusLabel[s.status]), el("span", "ft", "FT" + s.A.ft), el("span", "", ago(s.at)));
+  if (s.status === "pending") meta.append(el("span", "", "· aspetta la conferma di " + nameOf(s.b)));
+  if (s.status === "disputed" && s.B && s.B.disputed && validScore(s.B.me, s.B.them, s.B.ft)) {
+    meta.append(el("span", "", `· secondo ${nameOf(s.b)}: ${s.B.them} – ${s.B.me}`));
+  } else if (s.status === "disputed") meta.append(el("span", "", "· i due resoconti non coincidono"));
+  c.append(meta);
+  if (s.A.note) c.append(el("div", "note", "“" + s.A.note + "” – " + nameOf(s.a)));
+  if (s.B && s.B.note) c.append(el("div", "note", "“" + s.B.note + "” – " + nameOf(s.b)));
+
+  if (writable && opts.actions) {
+    const acts = el("div", "acts");
+    if (s.b === myId && !s.B) {
+      const ok = el("button", "btn ok", "Confermo " + sa + " – " + sb); ok.type = "button";
+      ok.onclick = () => reply(s, false);
+      const no = el("button", "btn bad", "Contesto"); no.type = "button";
+      no.onclick = () => openDispute(c, s);
+      acts.append(ok, no);
+    }
+    if (s.a === myId && s.status === "pending") {
+      const w = el("button", "btn ghost", "Ritira (errore mio)"); w.type = "button";
+      w.onclick = () => saveMine(cur => { cur.sets[s.key].withdrawn = true; }, "Set ritirato");
+      acts.append(w);
+    }
+    if (acts.childNodes.length) c.append(acts);
+  }
+  return c;
+}
+
+function openDispute(card, s) {
+  if (card.querySelector("form")) return;
+  const f = el("form", "acts");
+  const lab = el("span", "hint", "Punteggio corretto secondo te (tu – " + nameOf(s.a) + "):"); lab.style.width = "100%";
+  f.append(lab);
+  const me = el("input"); me.type = "number"; me.min = 0; me.value = s.A.them; me.style.width = "5em"; me.setAttribute("aria-label", "Il tuo punteggio");
+  const th = el("input"); th.type = "number"; th.min = 0; th.value = s.A.me; th.style.width = "5em"; th.setAttribute("aria-label", "Punteggio avversario");
+  const note = el("input"); note.type = "text"; note.maxLength = 140; note.placeholder = "Motivo (facoltativo)"; note.style.flex = "1";
+  const go = el("button", "btn bad", "Invia contestazione"); go.type = "submit";
+  f.append(me, th, note, go);
+  f.onsubmit = e => {
+    e.preventDefault();
+    const a = Number(me.value), b = Number(th.value);
+    reply(s, true, validScore(a, b, s.A.ft) ? { me: a, them: b } : null, note.value.trim());
+  };
+  card.append(f);
+}
+
+function reply(s, disputed, claim, note) {
+  const rec = {
+    id: s.id, by: s.a, opp: s.a, ft: s.A.ft,
+    me: claim ? claim.me : s.A.them, them: claim ? claim.them : s.A.me,
+    myChar: s.A.oppChar || "", oppChar: s.A.myChar || "", at: Date.now(),
+  };
+  if (disputed) rec.disputed = true;
+  if (note) rec.note = note;
+  saveMine(cur => { cur.sets[s.key] = rec; }, disputed ? "Contestazione inviata" : "Set confermato");
+}
+
+function saveMine(mutate, done) {
+  writing = writing.then(async () => {
+    const cur = structuredClone(docs[myId] || {});
+    if (!cur.sets || typeof cur.sets !== "object") cur.sets = {};
+    mutate(cur);
+    await db.doc("reports/" + myId).set(cur);
+    if (done) toast(done);
+  }).catch(e => toast(errMsg(e)));
+  return writing;
+}
+
+function render() {
+  // Da confermare
+  const todo = sets.filter(s => s.b === myId && !s.B && s.status === "pending");
+  $("todoCard").hidden = !todo.length;
+  $("todo").replaceChildren(...todo.map(s => setCard(s, { actions: true })));
+
+  // Storico
+  const list = sets.filter(s => filter === "all" || s.status === filter || (filter === "disputed" && s.status === "withdrawn"));
+  if (!list.length) {
+    const p = el("p", "empty", sets.length ? "Nessun set con questo stato." : "Nessun set registrato. Registra il primo dal modulo qui accanto: l'avversario dovrà confermarlo.");
+    $("feed").replaceChildren(p);
+  } else $("feed").replaceChildren(...list.map(s => setCard(s, { actions: true })));
+
+  // Classifica
+  const conf = sets.filter(s => s.status === "confirmed");
+  const st = {};
+  const get = id => (st[id] ||= { id, sw: 0, sl: 0, gw: 0, gl: 0 });
+  for (const s of conf) {
+    const A = get(s.a), B = get(s.b), aw = s.A.me > s.A.them;
+    (aw ? A : B).sw++; (aw ? B : A).sl++;
+    A.gw += s.A.me; A.gl += s.A.them; B.gw += s.A.them; B.gl += s.A.me;
+  }
+  const rows = Object.values(st).sort((x, y) => y.sw - x.sw || (y.sw / (y.sw + y.sl)) - (x.sw / (x.sw + x.sl)) || (y.gw - y.gl) - (x.gw - x.gl));
+  if (!rows.length) $("board").replaceChildren(el("p", "empty", "Nessun set confermato ancora."));
+  else {
+    const t = el("table");
+    t.innerHTML = "<thead><tr><th></th><th>Giocatore</th><th class='n'>Set V–S</th><th class='n'>Game</th></tr></thead>";
+    const tb = el("tbody");
+    rows.forEach((r, i) => {
+      const tr = el("tr", r.id === myId ? "isme" : "");
+      tr.append(el("td", "pos", String(i + 1)), el("td", "", nameOf(r.id)),
+        el("td", "n", r.sw + "–" + r.sl), el("td", "n", r.gw + "–" + r.gl));
+      tb.append(tr);
+    });
+    t.append(tb); $("board").replaceChildren(t);
+  }
+
+  // Rivalità
+  const pairs = {};
+  for (const s of sets) {
+    if (s.status === "withdrawn") continue;
+    const [x, y] = [s.a, s.b].sort();
+    const p = (pairs[x + "|" + y] ||= { x, y, wx: 0, wy: 0, open: 0, n: 0 });
+    if (s.status === "confirmed") {
+      const winner = s.A.me > s.A.them ? s.a : s.b;
+      winner === x ? p.wx++ : p.wy++; p.n++;
+    } else p.open++;
+  }
+  const pl = Object.values(pairs).filter(p => p.n).sort((a, b) => b.n - a.n).slice(0, 8);
+  if (!pl.length) $("rivals").replaceChildren(el("p", "empty", "Le rivalità appaiono dopo il primo set confermato."));
+  else $("rivals").replaceChildren(...pl.map(p => {
+    const r = el("div", "rival");
+    const nm = el("div", "names"); nm.append(el("span", "", nameOf(p.x)), el("span", "b", nameOf(p.y)));
+    const bar = el("div", "bar");
+    const ia = el("i", "a"); ia.style.width = (p.wx / p.n * 100) + "%";
+    const ib = el("i", "b"); ib.style.width = (p.wy / p.n * 100) + "%";
+    bar.append(ia, ib);
+    const nums = el("div", "nums");
+    nums.append(el("span", "a", String(p.wx)),
+      el("small", "", p.n + " set" + (p.open ? ` · ${p.open} da chiarire` : "")),
+      el("span", "b", String(p.wy)));
+    r.append(nm, bar, nums);
+    return r;
+  }));
+
+  // Avversari conosciuti
+  const known = new Set(Object.keys(docs));
+  sets.forEach(s => { known.add(s.a); known.add(s.b); });
+  known.delete(myId);
+  $("known").replaceChildren(...[...known].slice(0, 20).map(id => {
+    const b = el("button", "chip", nameOf(id)); b.type = "button";
+    b.setAttribute("aria-pressed", String(id === oppId));
+    b.onclick = () => pickOpp(id);
+    return b;
+  }));
+  $("oppPicked").textContent = oppId ? nameOf(oppId) : "nessuno";
+
+  // Il mio nome
+  const tagEl = $("tag");
+  if (document.activeElement !== tagEl) tagEl.value = (docs[myId] && docs[myId].tag) || "";
+}
+
+function pickOpp(id) { oppId = id; $("oppResults").replaceChildren(); $("oppSearch").value = ""; refresh(); }
+
+async function searchOpp() {
+  if (!user) return;
+  const hits = await user.search($("oppSearch").value);
+  $("oppResults").replaceChildren(...hits.filter(h => h.id !== myId).map(h => {
+    const b = el("button"); b.type = "button";
+    const img = el("img"); img.src = h.avatarUrl; img.alt = "";
+    b.append(img, el("span", "", h.name));
+    b.onclick = () => pickOpp(h.id);
+    return b;
+  }));
+}
+
+$("oppSearch").addEventListener("input", searchOpp);
+$("oppSearch").addEventListener("focus", searchOpp);
+$("filters").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if (!b) return;
+  filter = b.dataset.f;
+  $("filters").querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  render();
+});
+$("ft").addEventListener("change", () => { $("sMe").value = $("ft").value; });
+$("tag").addEventListener("change", () => {
+  const v = $("tag").value.trim().slice(0, 24);
+  if (writable) saveMine(cur => { cur.tag = v; }, "Nome salvato");
+});
+$("setForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const ft = Number($("ft").value), me = Number($("sMe").value), them = Number($("sThem").value);
+  const err = $("formErr");
+  let msg = "";
+  if (!oppId) msg = "Scegli l'avversario.";
+  else if (!validScore(me, them, ft)) msg = `In FT${ft} chi vince deve arrivare esattamente a ${ft} e l'altro restare sotto.`;
+  err.textContent = msg; err.hidden = !msg;
+  if (msg) return;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const rec = { id, by: myId, opp: oppId, ft, me, them, myChar: $("cMe").value.trim().slice(0, 24), oppChar: $("cThem").value.trim().slice(0, 24), at: Date.now() };
+  const note = $("note").value.trim().slice(0, 140);
+  if (note) rec.note = note;
+  saveMine(cur => { cur.sets[myId + "|" + id] = rec; }, "Set registrato: ora deve confermarlo " + nameOf(oppId)).then(() => {
+    $("note").value = ""; $("sThem").value = 0;
+  });
+});
+
+function setWritable(on) {
+  writable = on;
+  $("setForm").hidden = !on; $("readOnly").hidden = on; $("meBox").hidden = !on;
+}
+
+async function start() {
+  setWritable(false);
+  if (!window.claude || !window.claude.use) { banner("Apri questa pagina da claude.ai per vedere e registrare i set."); $("feed").replaceChildren(el("p", "empty", "Dati non disponibili fuori da claude.ai.")); return; }
+  [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  if (!db) { banner("Non riesco a caricare i set: accedi a claude.ai e riapri la pagina."); $("feed").replaceChildren(el("p", "empty", "Dati non disponibili.")); return; }
+  myId = user ? await user.id() : null;
+  const can = user ? await user.can("data.write") : null;
+  setWritable(!!myId && can !== false);
+  db.collection("reports").onSnapshot(snap => {
+    const next = {};
+    snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
+    docs = next; refresh();
+  }, () => banner("Collegamento ai dati perso: ricarica la pagina."));
+}
+start();
+</script>
