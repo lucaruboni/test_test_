@@ -122,8 +122,59 @@ tr.isme td { font-weight: 600; }
 .results { display: grid; gap: 4px; }
 .results button { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
 .results img { width: 22px; height: 22px; border-radius: 50%; }
-#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; max-width: calc(100% - 32px); }
+#toast { z-index: 100; position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; max-width: calc(100% - 32px); }
 @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+
+[hidden] { display: none !important; }
+/* Modalità live: schermo diviso stile contatore di vita, sinistra rossa e destra blu */
+.live-btn { border-color: var(--p1); background: var(--p1); color: #fff; }
+#live {
+  position: fixed; inset: 0; z-index: 50; background: var(--bg); color: var(--fg);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 22%) minmax(0, 1fr);
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.lv-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; padding: 12px; }
+.lv-side[data-i="0"] { --c: var(--p1); background: color-mix(in srgb, var(--p1) 14%, var(--bg)); }
+.lv-side[data-i="1"] { --c: var(--p2); background: color-mix(in srgb, var(--p2) 14%, var(--bg)); }
+.lv-head { display: flex; gap: 8px; align-items: center; }
+.lv-side[data-i="1"] .lv-head { flex-direction: row-reverse; }
+.lv-name { flex: 1; min-width: 0; font: 700 clamp(18px, 4.5vmin, 32px)/1.1 var(--display); text-transform: uppercase; background: none; border: 0; color: var(--fg); text-align: left; cursor: pointer; padding: 4px 0; overflow-wrap: anywhere; }
+.lv-side[data-i="1"] .lv-name { text-align: right; }
+.lv-name.unset { color: var(--muted); text-decoration: underline dotted; }
+.lv-char { width: 9.5em !important; flex: none; background: transparent !important; }
+.lv-tap {
+  flex: 1; min-height: 0; border: 0; border-radius: 18px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  background: color-mix(in srgb, var(--c) 10%, transparent); color: var(--c);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.lv-tap:active { background: color-mix(in srgb, var(--c) 26%, transparent); }
+.lv-score { font: 700 clamp(90px, 44vmin, 340px)/.9 var(--display); font-variant-numeric: tabular-nums; }
+.lv-hint { font-size: 12.5px; color: var(--muted); }
+.lv-mid { display: flex; flex-direction: column; gap: 10px; padding: 12px 10px; min-height: 0; overflow-y: auto; background: var(--panel); border-inline: 1px solid var(--line); }
+.lv-mid .lbl { font: 700 11.5px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.lv-ft { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.lv-ft b { font: 700 26px var(--display); }
+.lv-ft button { width: 40px; height: 40px; font: 700 20px var(--display); }
+.lv-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.lv-row .btn { flex: 1; padding: 8px 6px; }
+.lv-pips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 22px; }
+.pip { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 11px var(--display); color: #fff; }
+.pip.a { background: var(--p1); } .pip.b { background: var(--p2); }
+.lv-queue { display: grid; gap: 4px; }
+.lv-queue ol { margin: 0; padding-left: 22px; display: grid; gap: 2px; }
+.lv-queue li { overflow-wrap: anywhere; }
+.lv-queue li .lv-x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
+.lv-veil { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(4px); z-index: 2; }
+.lv-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 10px; width: min(460px, 100%); max-height: 100%; overflow-y: auto; box-sizing: border-box; }
+.lv-card.end { text-align: center; }
+.lv-card h3 { margin: 0; font: 700 26px/1.1 var(--display); text-transform: uppercase; }
+.lv-big { font: 700 64px/1 var(--display); font-variant-numeric: tabular-nums; }
+.lv-big .a { color: var(--p1); } .lv-big .b { color: var(--p2); }
+@media (orientation: portrait) {
+  #live { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .lv-mid { border-inline: 0; border-block: 1px solid var(--line); max-height: 34vh; }
+  .lv-score { font-size: clamp(80px, 22vh, 220px); }
+}
 </style>
 
 <div class="wrap">
@@ -132,6 +183,7 @@ tr.isme td { font-weight: 600; }
       <h1>Beef <span class="vs">Board</span></h1>
       <p class="sub">Tekken, Street Fighter o qualsiasi picchiaduro. Un set conta solo quando <b>tutti e due</b> i giocatori lo confermano con lo stesso punteggio. Ognuno può scrivere solo i propri resoconti, quindi nessuno può confermare al posto dell'altro.</p>
     </div>
+    <button class="btn live-btn" id="liveBtn" type="button">▶ Modalità live</button>
     <div class="me" id="meBox" hidden>
       <label for="tag">Il tuo nome in gioco</label>
       <input id="tag" type="text" maxlength="24" placeholder="es. KazuMain" style="width:12em">
@@ -219,6 +271,72 @@ tr.isme td { font-weight: 600; }
 </div>
 <div id="toast" hidden></div>
 
+<div id="live" hidden>
+  <div class="lv-side" data-i="0">
+    <div class="lv-head">
+      <button class="lv-name" type="button" data-pick="0"></button>
+      <input class="lv-char" id="lvChar0" type="text" placeholder="Personaggio" aria-label="Personaggio lato rosso">
+    </div>
+    <button class="lv-tap" type="button" data-tap="0" aria-label="Game al lato rosso"><span class="lv-score" id="lvScore0">0</span><span class="lv-hint">tocca = +1 game</span></button>
+  </div>
+  <div class="lv-mid">
+    <span class="lbl">Formato</span>
+    <div class="lv-ft"><button class="btn ghost" type="button" id="lvFtDown" aria-label="Formato più corto">−</button><b id="lvFt">FT3</b><button class="btn ghost" type="button" id="lvFtUp" aria-label="Formato più lungo">+</button></div>
+    <label class="field"><span class="lbl">Gioco</span><input id="lvGame" type="text" list="gameList" maxlength="40"></label>
+    <span class="lbl">Game</span>
+    <div class="lv-pips" id="lvPips"></div>
+    <div class="lv-row">
+      <button class="btn ghost" type="button" id="lvUndo">↶ Annulla</button>
+      <button class="btn ghost" type="button" id="lvSwap">⇄ Lati</button>
+    </div>
+    <div class="lv-queue">
+      <span class="lbl">Chi entra dopo (resta chi vince)</span>
+      <ol id="lvQueue"></ol>
+      <button class="btn ghost" type="button" id="lvQAdd">+ Metti in coda</button>
+    </div>
+    <div class="lv-row">
+      <button class="btn ghost" type="button" id="lvReset">Azzera</button>
+      <button class="btn" type="button" id="lvClose">Esci</button>
+    </div>
+  </div>
+  <div class="lv-side" data-i="1">
+    <div class="lv-head">
+      <button class="lv-name" type="button" data-pick="1"></button>
+      <input class="lv-char" id="lvChar1" type="text" placeholder="Personaggio" aria-label="Personaggio lato blu">
+    </div>
+    <button class="lv-tap" type="button" data-tap="1" aria-label="Game al lato blu"><span class="lv-score" id="lvScore1">0</span><span class="lv-hint">tocca = +1 game</span></button>
+  </div>
+
+  <div class="lv-veil" id="lvEnd" hidden>
+    <div class="lv-card end">
+      <h3 id="lvEndTitle"></h3>
+      <div class="lv-big"><span class="a" id="lvEndA"></span> – <span class="b" id="lvEndB"></span></div>
+      <button class="btn ok" type="button" id="lvReg">Registra sul Beef Board</button>
+      <p class="hint" id="lvRegMsg"></p>
+      <button class="btn" type="button" id="lvNext" hidden></button>
+      <div class="lv-row">
+        <button class="btn ghost" type="button" id="lvRematch">Rivincita</button>
+        <button class="btn ghost" type="button" id="lvEndUndo">↶ Annulla ultimo game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lv-veil" id="lvPick" hidden>
+    <div class="lv-card">
+      <h3 id="lvPickTitle" style="font-size:20px"></h3>
+      <div class="chips" id="lvKnown"></div>
+      <input id="lvSearch" type="search" placeholder="Cerca un giocatore per nome…" autocomplete="off">
+      <div class="results" id="lvResults"></div>
+      <form class="row" id="lvGuestForm">
+        <input id="lvGuest" type="text" maxlength="24" placeholder="Oppure nome ospite" style="flex:1">
+        <button class="btn ghost" type="submit">Usa ospite</button>
+      </form>
+      <p class="hint">Gli ospiti possono giocare e stare in coda, ma il set si registra solo tra giocatori del Beef Board.</p>
+      <button class="btn ghost" type="button" id="lvPickCancel">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <datalist id="gameList">
   <option>Tekken 8</option><option>Street Fighter 6</option><option>Guilty Gear Strive</option><option>Mortal Kombat 1</option><option>2XKO</option><option>Fatal Fury: City of the Wolves</option><option>Tekken 7</option><option>Street Fighter III: 3rd Strike</option><option>Super Smash Bros. Ultimate</option>
 </datalist>
@@ -301,6 +419,7 @@ async function refresh() {
   const ids = new Set(Object.keys(docs));
   sets.forEach(s => { ids.add(s.a); ids.add(s.b); });
   if (oppId) ids.add(oppId);
+  [...live.sides, ...live.queue].forEach(p => { if (p && p.pid) ids.add(p.pid); });
   if (user && ids.size) names = await user.profiles([...ids]);
   render();
 }
@@ -385,7 +504,8 @@ function saveMine(mutate, done) {
     mutate(cur);
     await db.doc("reports/" + myId).set(cur);
     if (done) toast(done);
-  }).catch(e => toast(errMsg(e)));
+    return true;
+  }).catch(e => { toast(errMsg(e)); return false; });
   return writing;
 }
 
@@ -482,6 +602,7 @@ function render() {
   // Il mio nome
   const tagEl = $("tag");
   if (document.activeElement !== tagEl) tagEl.value = (docs[myId] && docs[myId].tag) || "";
+  renderLive();
 }
 
 function pickOpp(id) { oppId = id; $("oppResults").replaceChildren(); $("oppSearch").value = ""; refresh(); }
@@ -506,6 +627,10 @@ $("filters").addEventListener("click", e => {
   $("filters").querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   render();
 });
+function listFor(game) {
+  const g = (game || "").trim().toLowerCase();
+  return g.includes("street fighter 6") || g === "sf6" ? "charsSF6" : g.includes("tekken") ? "chars" : "";
+}
 function syncCharList() {
   const g = $("game").value.trim().toLowerCase();
   const list = g.includes("street fighter 6") || g === "sf6" ? "charsSF6" : g.includes("tekken") ? "chars" : "";
@@ -555,5 +680,164 @@ async function start() {
     docs = next; refresh();
   }, () => banner("Collegamento ai dati perso: ricarica la pagina."));
 }
+// ---------- Modalità live ----------
+const LKEY = "beef-live";
+let live = loadLive(), pickTarget = null, wakeLock = null;
+function loadLive() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LKEY));
+    if (v && Array.isArray(v.sides) && v.sides.length === 2 && Array.isArray(v.log) && Array.isArray(v.queue)) return v;
+  } catch {}
+  return { ft: 3, game: "Tekken 8", sides: [{}, {}], log: [], queue: [], registered: false };
+}
+function saveLive() { try { localStorage.setItem(LKEY, JSON.stringify(live)); } catch {} }
+const scoreOf = i => live.log.filter(x => x === i).length;
+const pLabel = p => p && p.pid ? nameOf(p.pid) : (p && p.guest) || "";
+const ended = () => Math.max(scoreOf(0), scoreOf(1)) >= live.ft;
+function changed() { live.registered = false; saveLive(); renderLive(); }
+
+function renderLive() {
+  if ($("live").hidden) return;
+  [0, 1].forEach(i => {
+    const p = live.sides[i] || {};
+    const nb = document.querySelector(`[data-pick="${i}"]`);
+    nb.textContent = pLabel(p) || "Scegli giocatore";
+    nb.classList.toggle("unset", !pLabel(p));
+    $("lvScore" + i).textContent = scoreOf(i);
+    const ci = $("lvChar" + i);
+    if (document.activeElement !== ci) ci.value = p.char || "";
+    const lst = listFor(live.game);
+    lst ? ci.setAttribute("list", lst) : ci.removeAttribute("list");
+  });
+  $("lvFt").textContent = "FT" + live.ft;
+  if (document.activeElement !== $("lvGame")) $("lvGame").value = live.game;
+  $("lvPips").replaceChildren(...live.log.map((w, k) => el("span", "pip " + (w ? "b" : "a"), String(k + 1))));
+  $("lvQueue").replaceChildren(...(live.queue.length ? live.queue.map((p, k) => {
+    const li = el("li"); li.append(document.createTextNode(pLabel(p) + " "));
+    const x = el("button", "lv-x", "×"); x.type = "button"; x.setAttribute("aria-label", "Togli dalla coda");
+    x.onclick = () => { live.queue.splice(k, 1); saveLive(); renderLive(); };
+    li.append(x); return li;
+  }) : [el("li", "hint", "Nessuno in coda")]));
+  $("lvUndo").disabled = !live.log.length;
+  renderEnd();
+}
+
+function renderEnd() {
+  const done = ended();
+  $("lvEnd").hidden = !done;
+  if (!done) return;
+  const s0 = scoreOf(0), s1 = scoreOf(1), w = s0 > s1 ? 0 : 1, l = 1 - w;
+  $("lvEndTitle").textContent = (pLabel(live.sides[w]) || (w ? "Blu" : "Rosso")) + " vince";
+  $("lvEndA").textContent = s0; $("lvEndB").textContent = s1;
+  const me = live.sides.findIndex(p => p && p.pid && p.pid === myId);
+  let why = "";
+  if (!writable) why = "Per registrare il set accedi con un account che ha accesso come Contributor.";
+  else if (me < 0) why = "Per registrarlo da qui devi essere uno dei due giocatori: tocca un nome e scegli te stesso.";
+  else if (!live.sides[1 - me].pid) why = "L'avversario è un ospite: si registra solo un set tra giocatori del Beef Board.";
+  else if (!validScore(scoreOf(me), scoreOf(1 - me), live.ft)) why = "Punteggio non valido per FT" + live.ft + ".";
+  else if (live.registered) why = "Registrato. Ora " + nameOf(live.sides[1 - me].pid) + " deve confermarlo dal suo dispositivo: fino ad allora resta “in attesa”.";
+  $("lvReg").hidden = !!why;
+  $("lvRegMsg").textContent = why || "Il set andrà “in attesa” finché l'avversario non lo conferma.";
+  $("lvNext").hidden = !live.queue.length;
+  if (live.queue.length) $("lvNext").textContent = `Avanti ${pLabel(live.queue[0])} · esce ${pLabel(live.sides[l]) || (l ? "Blu" : "Rosso")}`;
+}
+
+async function openLive() {
+  $("live").hidden = false; document.body.style.overflow = "hidden";
+  try { await document.documentElement.requestFullscreen(); } catch {}
+  try { await screen.orientation.lock("landscape"); } catch {}
+  try { wakeLock = await navigator.wakeLock.request("screen"); } catch {}
+  refresh();
+}
+function closeLive() {
+  $("live").hidden = true; document.body.style.overflow = "";
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
+  try { if (wakeLock) wakeLock.release(); } catch {}
+  wakeLock = null;
+}
+
+function openPick(t) {
+  pickTarget = t;
+  $("lvPickTitle").textContent = t === "q" ? "Chi entra in coda?" : `Chi gioca dal lato ${t ? "blu" : "rosso"}?`;
+  const ids = new Set();
+  if (myId) ids.add(myId);
+  Object.keys(docs).forEach(i => ids.add(i));
+  sets.forEach(s => { ids.add(s.a); ids.add(s.b); });
+  $("lvKnown").replaceChildren(...[...ids].map(id => {
+    const b = el("button", "chip", id === myId ? nameOf(id) + " (io)" : nameOf(id)); b.type = "button";
+    b.onclick = () => pickDone({ pid: id });
+    return b;
+  }));
+  $("lvSearch").value = ""; $("lvResults").replaceChildren(); $("lvGuest").value = "";
+  $("lvPick").hidden = false;
+}
+function pickDone(p) {
+  if (pickTarget === "q") live.queue.push(p);
+  else live.sides[pickTarget] = { ...p, char: (live.sides[pickTarget] || {}).char || "" };
+  $("lvPick").hidden = true;
+  live.registered = false; saveLive(); refresh();
+}
+
+$("liveBtn").onclick = openLive;
+$("lvClose").onclick = closeLive;
+document.querySelectorAll("[data-tap]").forEach(b => b.onclick = () => {
+  if (ended()) return;
+  live.log.push(Number(b.dataset.tap));
+  try { navigator.vibrate && navigator.vibrate(15); } catch {}
+  changed();
+});
+document.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => openPick(Number(b.dataset.pick)));
+[0, 1].forEach(i => $("lvChar" + i).addEventListener("change", e => {
+  live.sides[i] = { ...(live.sides[i] || {}), char: e.target.value.trim().slice(0, 24) }; saveLive();
+}));
+$("lvFtUp").onclick = () => { live.ft = Math.min(20, live.ft + 1); changed(); };
+$("lvFtDown").onclick = () => { live.ft = Math.max(1, live.ft - 1); changed(); };
+$("lvGame").addEventListener("change", e => { live.game = e.target.value.trim().slice(0, 40) || "Tekken 8"; changed(); });
+$("lvUndo").onclick = $("lvEndUndo").onclick = () => { live.log.pop(); changed(); };
+$("lvSwap").onclick = () => { live.sides.reverse(); live.log = live.log.map(x => 1 - x); changed(); };
+$("lvReset").onclick = $("lvRematch").onclick = () => { live.log = []; changed(); };
+$("lvNext").onclick = () => {
+  const w = scoreOf(0) > scoreOf(1) ? 0 : 1, l = 1 - w;
+  const next = live.queue.shift();
+  const out = { ...live.sides[l] }; delete out.char;
+  live.queue.push(out);
+  live.sides[l] = { ...next, char: "" };
+  live.log = []; changed(); refresh();
+};
+$("lvQAdd").onclick = () => openPick("q");
+$("lvPickCancel").onclick = () => { $("lvPick").hidden = true; };
+$("lvGuestForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const g = $("lvGuest").value.trim().slice(0, 24);
+  if (g) pickDone({ guest: g });
+});
+async function lvSearch() {
+  if (!user) return;
+  const hits = await user.search($("lvSearch").value);
+  $("lvResults").replaceChildren(...hits.map(h => {
+    const b = el("button"); b.type = "button";
+    const img = el("img"); img.src = h.avatarUrl; img.alt = "";
+    b.append(img, el("span", "", h.id === myId ? h.name + " (io)" : h.name));
+    b.onclick = () => pickDone({ pid: h.id });
+    return b;
+  }));
+}
+$("lvSearch").addEventListener("input", lvSearch);
+$("lvSearch").addEventListener("focus", lvSearch);
+$("lvReg").onclick = async () => {
+  const me = live.sides.findIndex(p => p && p.pid === myId), o = 1 - me;
+  if (me < 0 || !live.sides[o].pid) return;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const rec = {
+    id, by: myId, opp: live.sides[o].pid, game: (live.game || "Tekken 8").slice(0, 40), ft: live.ft,
+    me: scoreOf(me), them: scoreOf(o), myChar: live.sides[me].char || "", oppChar: live.sides[o].char || "",
+    at: Date.now(), note: "Registrato dalla modalità live",
+  };
+  $("lvReg").disabled = true;
+  const ok = await saveMine(cur => { cur.sets[myId + "|" + id] = rec; }, "Set registrato: ora deve confermarlo " + nameOf(rec.opp));
+  $("lvReg").disabled = false;
+  if (ok) { live.registered = true; saveLive(); renderLive(); }
+};
+
 start();
 </script>
