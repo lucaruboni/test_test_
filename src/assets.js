@@ -2,7 +2,7 @@
 import * as THREE from '../lib/three.module.min.js';
 import { GLTFLoader } from '../lib/GLTFLoader.js';
 
-const MODELS = { zombie: 'zombie', pistol: 'service_pistol', crate: 'wooden_military_crate', lamp: 'hanging_industrial_lamp', powerbox: 'power_box_01' };
+const MODELS = { zombie: 'zombie', guns: 'guns', vending: 'vending', props: 'props', crate: 'wooden_military_crate', lamp: 'hanging_industrial_lamp', powerbox: 'power_box_01' };
 const TEXTURES = { wall: 'dark_brick_wall_diff', wallN: 'dark_brick_wall_nor', floor: 'concrete_floor_worn_001_diff', floorN: 'concrete_floor_worn_001_nor', plank: 'old_planks_02_diff' };
 const HIDE = /bullet|magazine|wrap|_b$/i;
 let cache = null;
@@ -13,9 +13,14 @@ function simplify(scene) {
     if (!o.isMesh) return;
     const m = o.material, glass = /glass/i.test(m.name);
     if (o.isSkinnedMesh) { o.frustumCulled = false; o.material = new THREE.MeshLambertMaterial({ vertexColors: true }); return; }
-    o.material = glass
-      ? new THREE.MeshBasicMaterial({ color: 0xffd9a0 })
-      : new THREE.MeshLambertMaterial({ map: m.map, normalMap: m.normalMap, color: 0xd8d8d8 });
+    // one converted material per source material, so clones can be re-tinted by name ("accent", "glow_*")
+    if (!m.userData.lite) {
+      m.userData.lite = glass ? new THREE.MeshBasicMaterial({ color: 0xffd9a0 })
+        : /^glow/.test(m.name) ? new THREE.MeshBasicMaterial({ color: m.color.clone() })
+        : new THREE.MeshLambertMaterial({ map: m.map, normalMap: m.normalMap, color: m.map ? new THREE.Color(0xd8d8d8) : m.color.clone() });
+      m.userData.lite.name = m.name;
+    }
+    o.material = m.userData.lite;
   });
   return scene;
 }

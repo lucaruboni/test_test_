@@ -20,6 +20,8 @@ Locally: run `python3 -m http.server` in the folder and open `http://localhost:8
 - Rounds with rising zombie count, health and speed; at most 24 alive at once.
 - Points per hit and per kill (more for headshots and knife kills).
 - 7 wall weapons (ammo refills at half price) and a 950-point Mystery Crate that moves between 4 spots.
+- Perk machines are Asian street-food vending machines (noodle cups, bento, onigiri, steamed buns, canned tea), dark until the power is on.
+- Set dressing in every room: barrels, benches, crate stacks, luggage, trolleys. They block movement like walls.
 - 5 perks: Second Wind (self-revive), Iron Hide (250 health), Quick Hands (reload), Twin Tap (fire rate and damage), Pack Rat (third weapon).
 - Lobby with starting weapon, player and weapon levels, 7 attachments (max 3 per weapon). Progress is saved in `localStorage`.
 - Main menu, loading screens, pause, settings (sensitivity, FOV, volume, quality, Y axis, left-handed layout).
@@ -42,4 +44,4 @@ On touch screens **simple controls** are on by default: the gun fires by itself 
 
 `.claude/skills/blender-modeling/` is a Claude skill for building and previewing 3D models with headless Blender; `tools/make_zombie.py` is the first generator written with it.
 
-`index.html`, `style.css`, `src/` (`data.js` data, `game.js` engine, `input.js`, `audio.js`, `save.js`, `main.js` UI, `assets.js` loader, `models.js` generated models), `lib/` (three.js r170 and its glTF loader, MIT), `assets/` (CC0 models and textures from Poly Haven, see `assets/LICENSE.md`). If an asset fails to load the game falls back to built-in shapes. The zombie is a rigged, animated model generated with Blender by `tools/make_zombie.py` (`pip install bpy`, then `python3 tools/make_zombie.py assets/models/zombie`). Most guns are built in code (`src/models.js`): articulated bodies with generated skin and cloth textures, and a parametric gun builder that gives each weapon its own silhouette. Fonts (Teko, Barlow Condensed) load from Google Fonts.
+`index.html`, `style.css`, `src/` (`data.js` data, `game.js` engine, `input.js`, `audio.js`, `save.js`, `main.js` UI, `assets.js` loader, `models.js` generated models), `lib/` (three.js r170 and its glTF loader, MIT), `assets/` (CC0 models and textures from Poly Haven, see `assets/LICENSE.md`). If an asset fails to load the game falls back to built-in shapes. The zombie is a rigged, animated model generated with Blender by `tools/make_zombie.py` (`pip install bpy`, then `python3 tools/make_zombie.py assets/models/zombie`). Guns, perk vending machines and set-dressing props are generated the same way by `tools/make_assets.py` (`python3 tools/make_assets.py assets/models`). `src/models.js` keeps code-built fallbacks: articulated bodies with generated skin and cloth textures, and a parametric gun builder that gives each weapon its own silhouette. Fonts (Teko, Barlow Condensed) load from Google Fonts.

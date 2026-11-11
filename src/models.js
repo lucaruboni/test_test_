@@ -109,6 +109,7 @@ const G = {
   arc:      { len: 0.5, rec: 0.3, h: 0.13, w: 0.1, br: 0.03, stock: 'poly', grip: 'poly', glow: 1 },
 };
 export const hasGun = id => !!G[id];
+export const gunInfo = id => { const s = G[id] || { len: 0.25, h: 0.055 }; return { muzzleZ: -s.len - (s.brake ? 0.06 : 0), flashY: s.h * 0.18 }; };
 
 let gm = null;
 function gunMats(plank) {

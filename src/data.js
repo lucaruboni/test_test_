@@ -64,6 +64,12 @@ export const WEAPONS = {
   arc:      { name: 'Arc Caster',  cls: 'energy',  dmg: 1200, rpm: 150, auto: false, mag: 20, reserve: 140, reload: 3.0, spread: 0.002, pellets: 1, kick: 0.030, splash: 3.2 },
 };
 
+// Set dressing: [column, row, model] in room coordinates (before MAP_OX/MAP_OY). Each one blocks its cell.
+export const PROPS = [
+  [1, 8, 'barrels'], [5, 8, 'luggage'], [5, 6, 'bench'], [1, 1, 'crates'], [7, 1, 'trolley'], [21, 13, 'barrels'], [21, 7, 'bench'], [7, 7, 'bench'],
+  [23, 1, 'crates'], [23, 6, 'barrels'], [23, 8, 'luggage'], [31, 8, 'bench'], [17, 15, 'crates'], [11, 18, 'barrels'], [21, 1, 'luggage'],
+];
+
 export const WALLBUYS = { a: 'warden', b: 'sawtooth', c: 'hornet', d: 'kestrel', e: 'bulldog', f: 'viper', g: 'trident' };
 export const CRATE_POOL = ['anvil', 'longbow', 'reaper', 'talon', 'arc', 'magnate', 'tercet', 'kestrel', 'viper', 'trident', 'bulldog'];
 

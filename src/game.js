@@ -1,9 +1,9 @@
 import * as THREE from '../lib/three.module.min.js';
-import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS } from './data.js';
+import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS, PROPS } from './data.js';
 import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
 import { loadAssets } from './assets.js';
-import { makeZombieKit, buildGun, hasGun } from './models.js';
+import { makeZombieKit, buildGun, hasGun, gunInfo } from './models.js';
 import { clone as cloneSkinned } from '../lib/SkeletonUtils.js';
 
 const W = MAP[0].length, H = MAP.length;
@@ -73,7 +73,7 @@ export class Game {
     await step(0.14, 'Securing the station…');
     this.solid = new Uint8Array(W * H);
     this.pblock = new Uint8Array(W * H); this.nook = new Uint8Array(W * H);
-    this.windows = []; this.winAt = {}; this.pads = {}; this.perkLights = []; this.perkBodies = []; this.drops = [];
+    this.windows = []; this.winAt = {}; this.pads = {}; this.perkLights = []; this.perkBodies = []; this.perkGlow = []; this.drops = [];
     this.power = false; this.tpCd = 0; this.buff = { insta: 0, double: 0 }; this.dropsLeft = 4;
     this.dist = new Int16Array(W * H).fill(-1);
     this.queue = new Int32Array(W * H);
@@ -179,11 +179,33 @@ export class Game {
         this.solid[i] = 1;
         const pk = PERKS[ch];
         const g = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.5, 1.7), new THREE.MeshLambertMaterial({ color: pk.color, emissive: pk.color, emissiveIntensity: pk.id === 'wind' ? 0.3 : 0.03 }));
-        if (pk.id !== 'wind') this.perkBodies.push(body);
-        body.position.y = 1.25; g.add(body);
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 1.9), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, '$' + pk.cost, pk.color) }));
-        sign.position.y = 2.9; g.add(sign);
+        // face the open side of the room
+        const dir = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dz]) => isFloor(c + dx, r + dz) && !isFloor(c - dx, r - dz)) || [0, 1];
+        const vend = A.models.vending && A.models.vending.getObjectByName('vending_' + pk.id);
+        if (vend) {
+          // food vending machine built in Blender: tint "accent" to the perk colour, keep the lit parts dark until the power is on
+          const m = vend.clone(true), mats = {};
+          m.traverse(o => {
+            if (!o.isMesh) return;
+            const src = o.material; let mm = mats[src.name];
+            if (!mm) {
+              mm = mats[src.name] = src.clone();
+              if (src.name === 'accent') mm.color.set(pk.color);
+              if (/^glow/.test(src.name) && pk.id !== 'wind') { this.perkGlow.push({ m: mm, c: mm.color.clone() }); mm.color.multiplyScalar(0.1); }
+            }
+            o.material = mm;
+          });
+          m.scale.setScalar(1.12); g.add(m);
+          const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 0.6), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, '$' + pk.cost, pk.color) }));
+          sign.position.set(0, 3.0, 0.2); g.add(sign);
+          g.rotation.y = Math.atan2(dir[0], dir[1]);
+        } else {
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.5, 1.7), new THREE.MeshLambertMaterial({ color: pk.color, emissive: pk.color, emissiveIntensity: pk.id === 'wind' ? 0.3 : 0.03 }));
+          if (pk.id !== 'wind') this.perkBodies.push(body);
+          body.position.y = 1.25; g.add(body);
+          const sign = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 1.9), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, '$' + pk.cost, pk.color) }));
+          sign.position.y = 2.9; g.add(sign);
+        }
         g.position.set(x, 0, z); this.scene.add(g);
         const l = new THREE.PointLight(pk.color, pk.id === 'wind' ? 6 : 0, 9, 1.6); l.position.set(x, 3.2, z); this.scene.add(l);
         if (pk.id !== 'wind') this.perkLights.push(l);
@@ -198,6 +220,18 @@ export class Game {
         this.cratePts.push(it); this.inter.push(it);
       }
     }
+    PROPS.forEach(([pc, pr, type], n) => {
+      const c = pc + MAP_OX, r = pr + MAP_OY, i = r * W + c;
+      if (MAP[r][c] !== '.') return;
+      this.solid[i] = 1;
+      const src = A.models.props && A.models.props.getObjectByName('prop_' + type);
+      const o = src ? src.clone(true) : new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 1.4).translate(0, 0.5, 0), this.mats.crate);
+      // benches sit with their back to the nearest wall; everything else gets a varied turn
+      const wall = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dz]) => !isFloor(c + dx, r + dz)) || [0, -1];
+      o.rotation.y = type === 'bench' ? Math.atan2(-wall[0], -wall[1]) : n * 1.7;
+      const push = type === 'bench' ? 0.75 : 0;
+      o.position.set(cx(c) + wall[0] * push, 0, cz(r) + wall[1] * push); this.scene.add(o);
+    });
     const inst = new THREE.InstancedMesh(box, this.mats.wall, walls.length);
     const mtx = new THREE.Matrix4();
     walls.forEach(([x, z], n) => { mtx.makeTranslation(x, WALL_H / 2, z); inst.setMatrixAt(n, mtx); });
@@ -326,6 +360,17 @@ export class Game {
       const a = add(new THREE.CapsuleGeometry(0.05, 0.42, 3, 8), this.zkit.sleeve, 0.035, -0.15, 0.3); a.rotation.set(Math.PI / 2 - 0.2, 0, 0.1);
       add(new THREE.SphereGeometry(0.04, 8, 6), this.zkit.skin, 0.012, -0.105, 0.02).scale.set(0.9, 1.15, 1.1);
     };
+    const gm = this.assets.models.guns && this.assets.models.guns.getObjectByName(w.id);
+    if (gm) {
+      // gun built in Blender (tools/make_assets.py); barrel already points down -Z
+      const b = gm.clone(true), info = gunInfo(w.id);
+      if (w.def.up) b.traverse(o => { if (o.isMesh && o.material.emissive) { o.material = o.material.clone(); o.material.emissive.set(0x5a2800); } });
+      vm.add(b); sleeve();
+      if ((this.profile.weapons[w.id].att || []).includes('sight')) { add(new THREE.CylinderGeometry(0.02, 0.02, 0.07, 10), M.dark, 0, w.def.cls === 'pistol' ? 0.07 : 0.085, -0.1).rotation.x = Math.PI / 2; }
+      this.flash.position.set(0, info.flashY, info.muzzleZ - 0.06); vm.add(this.flash);
+      this.muzzleZ = info.muzzleZ;
+      return;
+    }
     if (hasGun(w.id)) {
       const b = buildGun(w.id, { up: w.def.up, sight: (this.profile.weapons[w.id].att || []).includes('sight') });
       vm.add(b.g); sleeve();
@@ -615,7 +660,7 @@ export class Game {
   }
   powerOn() {
     this.power = true; sfx('round');
-    this.perkLights.forEach(l => l.intensity = 6); this.perkBodies.forEach(b => b.material.emissiveIntensity = 0.3);
+    this.perkLights.forEach(l => l.intensity = 6); this.perkBodies.forEach(b => b.material.emissiveIntensity = 0.3); this.perkGlow.forEach(e => e.m.color.copy(e.c));
     this.leverArm.rotation.x = 2.3; this.leverLamp.material.color.set(0x3fe06a);
     for (const k in this.pads) { this.pads[k].m.material.color.set(0x2aa8c8); this.pads[k].ring.visible = true; }
     this.message('POWER ON', 3, true);
