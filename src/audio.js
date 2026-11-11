@@ -1,4 +1,4 @@
-// Effetti sonori sintetizzati con WebAudio (nessun file audio).
+// Sound effects synthesised with WebAudio (no audio files).
 let ctx = null, master = null, noiseBuf = null, vol = 0.7;
 
 export function initAudio() {
@@ -58,5 +58,5 @@ const S = {
 
 export function sfx(name) {
   if (!ctx || ctx.state !== 'running') return;
-  try { (S[name] || S.click)(); } catch (e) { /* ignora */ }
+  try { (S[name] || S.click)(); } catch (e) { /* ignore */ }
 }

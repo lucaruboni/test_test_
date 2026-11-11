@@ -1,6 +1,7 @@
 {
   "name": "Notte Rossa",
   "short_name": "Notte Rossa",
+  "lang": "en",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "landscape",

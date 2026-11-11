@@ -1,12 +1,12 @@
-// Input unificato: touch (joystick virtuale + trascinamento visuale), controller (Gamepad API), tastiera/mouse.
+// Unified input: touch (virtual stick + drag look), controller (Gamepad API), keyboard/mouse.
 export class Input {
   constructor() {
     this.isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.move = { x: 0, y: 0 };      // x destra, y avanti
-    this.look = { x: 0, y: 0 };      // radianti accumulati per frame
+    this.move = { x: 0, y: 0 };      // x right, y forward
+    this.look = { x: 0, y: 0 };      // radians accumulated per frame
     this.fire = false; this.ads = false; this.sprint = false;
     this.pressed = new Set();
-    this.active = false;             // true solo durante la partita
+    this.active = false;             // true only during a match
     this.sens = 1; this.lefty = false;
     this.gamepadName = null;
     this.keys = {};
@@ -41,7 +41,7 @@ export class Input {
     const cv = document.getElementById('view');
     cv.addEventListener('mousedown', e => {
       if (!this.active || this.isTouchRecent) return;
-      if (document.pointerLockElement !== cv && cv.requestPointerLock) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ignora */ } }
+      if (document.pointerLockElement !== cv && cv.requestPointerLock) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ignore */ } }
       if (e.button === 0) this.m.fire = true;
       if (e.button === 2) this.m.ads = true;
     });
@@ -133,12 +133,12 @@ export class Input {
     return null;
   }
 
-  // Bottone premuto in questo frame (per i menu)
+  // Button pressed this frame (for menus)
   padEdge(g, i) { const now = !!(g.buttons[i] && g.buttons[i].pressed); return now && !this.gpPrev[i]; }
   padCommit(g) { this.gpPrev = g.buttons.map(b => b.pressed); }
 
   poll(dt) {
-    // tastiera
+    // keyboard
     const k = this.keys;
     let mx = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), my = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
     let sprint = !!(k.ShiftLeft || k.ShiftRight);
@@ -150,7 +150,7 @@ export class Input {
       if (my > 0.93 || this.t.sprint) sprint = true;
     }
     let fire = this.m.fire || this.t.fire, ads = this.m.ads || this.t.ads;
-    // controller
+    // gamepad
     const g = this.pad();
     if (g) {
       const dz = v => Math.abs(v) < 0.16 ? 0 : (v - Math.sign(v) * 0.16) / 0.84;

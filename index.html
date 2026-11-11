@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -7,11 +7,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Notte Rossa">
-<meta name="theme-color" content="#07080b">
+<meta name="theme-color" content="#08090b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Notte Rossa</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,112 +21,142 @@
 <!-- HUD -->
 <div id="hud" class="hidden">
   <div id="vignette"></div>
-  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
-  <div id="hitmarker">✕</div>
-  <div id="hud-round"></div>
-  <div id="hud-left"></div>
-  <div id="hud-tr"><div id="hud-points">500</div><div id="hud-perks"></div></div>
-  <div id="hud-br"><div id="hud-weapon"></div><div id="hud-ammo"></div><div id="stamina-bar"><div id="stamina"></div></div></div>
+  <div id="dmg-dir"><i></i></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+
+  <div id="hud-tl">
+    <div class="score"><span class="tag">POINTS</span><span id="hud-points">500</span><div id="hud-pop"></div></div>
+  </div>
+  <div id="hud-bl">
+    <div class="roundbox"><span class="tag">ROUND</span><span id="hud-round"></span></div>
+    <div class="blcol"><div id="hud-left"></div><div id="hud-perks"></div></div>
+  </div>
+  <div id="hud-br">
+    <div id="hud-warn"></div>
+    <div class="ammo"><span id="hud-mag">0</span><span class="sep"></span><span id="hud-res">0</span></div>
+    <div id="hud-weapon"></div>
+    <div id="stamina-bar"><div id="stamina"></div></div>
+  </div>
   <div id="hud-prompt"></div>
   <div id="hud-msg"></div>
+
   <div id="touch">
     <div id="stick"><div id="knob"></div></div>
-    <div class="tb" id="btn-fire" data-btn="fire">FUOCO</div>
-    <div class="tb" id="btn-ads" data-btn="ads">MIRA</div>
-    <div class="tb" id="btn-reload" data-btn="reload">RIC.</div>
-    <div class="tb" id="btn-swap" data-btn="swap">ARMA</div>
-    <div class="tb" id="btn-knife" data-btn="knife">LAMA</div>
-    <div class="tb" id="btn-jump" data-btn="jump">SALTO</div>
-    <div class="tb" id="btn-sprint" data-btn="sprint">CORSA</div>
-    <div class="tb" id="btn-use" data-btn="use">USA</div>
+    <div class="tb" id="btn-fire" data-btn="fire">FIRE</div>
+    <div class="tb" id="btn-ads" data-btn="ads">AIM</div>
+    <div class="tb" id="btn-reload" data-btn="reload">RLD</div>
+    <div class="tb" id="btn-swap" data-btn="swap">SWAP</div>
+    <div class="tb" id="btn-knife" data-btn="knife">KNIFE</div>
+    <div class="tb" id="btn-jump" data-btn="jump">JUMP</div>
+    <div class="tb" id="btn-sprint" data-btn="sprint">RUN</div>
+    <div class="tb" id="btn-use" data-btn="use">USE</div>
   </div>
-  <button id="btn-pause" aria-label="Pausa">II</button>
+  <button id="btn-pause" aria-label="Pause"><i></i><i></i></button>
 </div>
 
-<!-- Caricamento -->
+<!-- Loading -->
 <section id="s-loading" class="screen">
-  <h1 class="logo">NOTTE <b>ROSSA</b></h1>
-  <p id="load-label">Caricamento…</p>
-  <div class="bar"><div id="load-bar"></div></div>
-  <p class="tip" id="load-tip"></p>
+  <div class="bgfx"></div>
+  <div class="load-top"><span class="kicker">NOW ENTERING</span><h1 class="display">NORTH STATION</h1><p class="meta">Solo · Round-based survival</p></div>
+  <div class="load-bottom">
+    <p class="tip"><b>TIP</b><span id="load-tip"></span></p>
+    <div class="load-row"><span id="load-label">Loading…</span><span id="load-pct">0%</span></div>
+    <div class="bar"><div id="load-bar"></div></div>
+  </div>
 </section>
 
-<!-- Menu principale -->
+<!-- Main menu -->
 <section id="s-menu" class="screen hidden">
-  <h1 class="logo">NOTTE <b>ROSSA</b></h1>
-  <p class="sub">Sopravvivenza a round · Stazione Nord</p>
-  <div class="col">
-    <button class="btn primary" data-go="lobby">GIOCA</button>
-    <button class="btn" data-go="settings">IMPOSTAZIONI</button>
-    <button class="btn" data-go="controls">COMANDI</button>
-    <button class="btn" data-go="quit">ESCI</button>
+  <div class="bgfx"></div>
+  <div class="menu-grid">
+    <div class="menu-left">
+      <div class="brand"><span class="kicker">ROUND-BASED SURVIVAL</span><h1 class="logo">NOTTE <b>ROSSA</b></h1></div>
+      <nav class="mlist">
+        <button class="mi primary" data-go="lobby"><span>PLAY</span><small>Solo · North Station</small></button>
+        <button class="mi" data-go="settings"><span>SETTINGS</span><small>Controls, video, audio</small></button>
+        <button class="mi" data-go="controls"><span>HOW TO PLAY</span><small>Touch, controller, keyboard</small></button>
+        <button class="mi" data-go="quit"><span>QUIT</span><small>Close the game</small></button>
+      </nav>
+    </div>
+    <aside class="card" id="menu-card"></aside>
   </div>
-  <p class="foot" id="pad-status">Nessun controller collegato</p>
+  <div class="hints"><span id="pad-status">No controller connected</span><span>v1.1</span></div>
 </section>
 
 <!-- Lobby -->
 <section id="s-lobby" class="screen hidden">
-  <header><h2>LOBBY</h2><div id="lobby-player"></div></header>
+  <div class="bgfx"></div>
+  <header class="topbar"><div><span class="kicker">PRE-GAME LOBBY</span><h2 class="display sm">LOADOUT</h2></div><div id="lobby-player"></div></header>
   <div class="lobby">
-    <div class="panel"><h3>Arma iniziale</h3><div id="lobby-starters" class="cards"></div>
-      <h3>Record</h3><p id="lobby-best"></p></div>
-    <div class="panel"><h3>Armeria</h3><div id="lobby-weapons" class="list"></div></div>
-    <div class="panel"><h3 id="att-title">Accessori</h3><div id="lobby-att" class="list"></div></div>
+    <div class="panel"><h3>Starting weapon</h3><div id="lobby-starters" class="list"></div><h3>Records</h3><div id="lobby-best" class="records"></div></div>
+    <div class="panel"><h3>Armory</h3><div id="lobby-weapons" class="list"></div></div>
+    <div class="panel"><h3 id="att-title">Attachments</h3><div id="lobby-stats" class="stats"></div><div id="lobby-att" class="list"></div></div>
   </div>
-  <footer><button class="btn" data-go="menu">INDIETRO</button><button class="btn primary" data-go="play">INIZIA PARTITA</button></footer>
+  <footer class="botbar"><button class="btn" data-go="menu">BACK</button><button class="btn primary" data-go="play">START MATCH</button></footer>
 </section>
 
-<!-- Impostazioni -->
+<!-- Settings -->
 <section id="s-settings" class="screen overlay hidden">
-  <h2>IMPOSTAZIONI</h2>
-  <div class="form">
-    <label>Sensibilità visuale <input type="range" id="set-sens" min="0.3" max="2.5" step="0.05"><output id="o-sens"></output></label>
-    <label>Campo visivo (FOV) <input type="range" id="set-fov" min="60" max="100" step="1"><output id="o-fov"></output></label>
-    <label>Volume <input type="range" id="set-vol" min="0" max="1" step="0.05"><output id="o-vol"></output></label>
-    <label>Qualità grafica <select id="set-quality"><option value="0">Bassa</option><option value="1">Media</option><option value="2">Alta</option></select></label>
-    <label>Inverti asse Y <input type="checkbox" id="set-invert"></label>
-    <label>Comandi per mancini <input type="checkbox" id="set-lefty"></label>
+  <div class="sheet">
+    <span class="kicker">OPTIONS</span><h2 class="display sm">SETTINGS</h2>
+    <div class="form">
+      <label><span>Look sensitivity</span><input type="range" id="set-sens" min="0.3" max="2.5" step="0.05"><output id="o-sens"></output></label>
+      <label><span>Field of view</span><input type="range" id="set-fov" min="60" max="100" step="1"><output id="o-fov"></output></label>
+      <label><span>Master volume</span><input type="range" id="set-vol" min="0" max="1" step="0.05"><output id="o-vol"></output></label>
+      <label><span>Graphics quality</span><select id="set-quality"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select></label>
+      <label><span>Invert Y axis</span><input type="checkbox" id="set-invert"></label>
+      <label><span>Left-handed touch layout</span><input type="checkbox" id="set-lefty"></label>
+    </div>
+    <button class="btn primary" data-go="back">DONE</button>
   </div>
-  <button class="btn primary" data-go="back">FATTO</button>
 </section>
 
-<!-- Comandi -->
+<!-- Controls -->
 <section id="s-controls" class="screen overlay hidden">
-  <h2>COMANDI</h2>
-  <div class="help">
-    <div><h3>Touch</h3><p>Metà sinistra: joystick (spingi a fondo per correre)<br>Metà destra: trascina per guardare<br>Pulsanti: fuoco, mira, ricarica, cambio arma, lama, salto, usa</p></div>
-    <div><h3>Controller</h3><p>Levette: movimento / visuale<br>RT fuoco · LT mira · X usa/ricarica<br>Y cambio arma · A salto · B lama<br>L3 corsa · RB ricarica · Start pausa</p></div>
-    <div><h3>Tastiera</h3><p>WASD · mouse · Shift corsa · Spazio salto<br>R ricarica · F usa · Q cambio · V lama · Esc pausa</p></div>
+  <div class="sheet wide">
+    <span class="kicker">FIELD MANUAL</span><h2 class="display sm">HOW TO PLAY</h2>
+    <div class="help">
+      <div><h3>Touch</h3><p>Left side: move stick (push fully to sprint)<br>Right side: drag to look<br>Buttons: fire, aim, reload, swap, knife, jump, use</p></div>
+      <div><h3>Controller</h3><p>Sticks: move / look<br>RT fire · LT aim · X use / reload<br>Y swap · A jump · B knife<br>L3 sprint · RB reload · Start pause</p></div>
+      <div><h3>Keyboard</h3><p>WASD · mouse · Shift sprint · Space jump<br>R reload · F use · Q swap · V knife · Esc pause</p></div>
+    </div>
+    <button class="btn primary" data-go="back">DONE</button>
   </div>
-  <button class="btn primary" data-go="back">FATTO</button>
 </section>
 
-<!-- Pausa -->
+<!-- Pause -->
 <section id="s-pause" class="screen overlay hidden">
-  <h2>PAUSA</h2>
-  <div class="col">
-    <button class="btn primary" data-go="resume">RIPRENDI</button>
-    <button class="btn" data-go="settings">IMPOSTAZIONI</button>
-    <button class="btn" data-go="controls">COMANDI</button>
-    <button class="btn" data-go="abandon">ABBANDONA PARTITA</button>
+  <div class="pause-col">
+    <span class="kicker" id="pause-info">ROUND 1</span><h2 class="display">PAUSED</h2>
+    <nav class="mlist">
+      <button class="mi primary" data-go="resume"><span>RESUME</span></button>
+      <button class="mi" data-go="settings"><span>SETTINGS</span></button>
+      <button class="mi" data-go="controls"><span>HOW TO PLAY</span></button>
+      <button class="mi" data-go="abandon"><span>END MATCH</span></button>
+    </nav>
   </div>
 </section>
 
-<!-- Fine partita -->
+<!-- Game over -->
 <section id="s-over" class="screen overlay hidden">
-  <h2 class="red">SEI CADUTO</h2>
-  <div id="over-stats"></div>
-  <button class="btn primary" data-go="lobby">TORNA ALLA LOBBY</button>
+  <div class="sheet wide center">
+    <span class="kicker">MATCH SUMMARY</span><h2 class="display red">YOU FELL</h2>
+    <div id="over-stats"></div>
+    <div id="over-xp"></div>
+    <button class="btn primary" data-go="lobby">BACK TO LOBBY</button>
+  </div>
 </section>
 
-<!-- Uscita -->
+<!-- Quit -->
 <section id="s-quit" class="screen hidden">
+  <div class="bgfx"></div>
   <h1 class="logo">NOTTE <b>ROSSA</b></h1>
-  <p class="sub">Grazie per aver giocato. Ora puoi chiudere l'app.</p>
-  <button class="btn" data-go="menu">TORNA AL MENU</button>
+  <p class="meta">Thanks for playing. You can close the app now.</p>
+  <button class="btn" data-go="menu">BACK TO MENU</button>
 </section>
 
-<div id="rotate"><p>Ruota il telefono in orizzontale</p></div>
+<div id="rotate"><p>Rotate your phone to landscape</p></div>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

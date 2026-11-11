@@ -61,10 +61,10 @@ export class Game {
   }
   applySettings() { this.resize(); this.input.sens = this.profile.settings.sens; this.input.lefty = this.profile.settings.lefty; }
 
-  // ---------- costruzione del mondo ----------
+  // ---------- world build ----------
   async build(progress) {
     const step = async (p, label) => { progress(p, label); await new Promise(r => setTimeout(r, 30)); };
-    await step(0.1, 'Preparo la stazione…');
+    await step(0.1, 'Securing the station…');
     this.solid = new Uint8Array(W * H);
     this.dist = new Int16Array(W * H).fill(-1);
     this.queue = new Int32Array(W * H);
@@ -98,7 +98,7 @@ export class Game {
       crate: new THREE.MeshLambertMaterial({ color: 0x4d3a22 }),
       crateOn: new THREE.MeshLambertMaterial({ color: 0x8a6a2a, emissive: 0x3a2a00 }),
     };
-    await step(0.3, 'Costruisco i muri…');
+    await step(0.3, 'Raising the walls…');
 
     const walls = [];
     const box = new THREE.BoxGeometry(CELL, WALL_H, CELL);
@@ -115,7 +115,7 @@ export class Game {
       } else if (WALLBUYS[ch]) {
         this.solid[i] = 1; walls.push([x, z]);
         const wid = WALLBUYS[ch], def = WEAPONS[wid];
-        const mat = new THREE.MeshBasicMaterial({ map: labelTex(def.name, def.cost + ' pt', '#e8e2c8'), transparent: true });
+        const mat = new THREE.MeshBasicMaterial({ map: labelTex(def.name, '$' + def.cost, '#e8e2c8'), transparent: true });
         const geo = new THREE.PlaneGeometry(1.9, 0.95);
         [[1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2], [0, 1, 0], [0, -1, Math.PI]].forEach(([dx, dz, ry]) => {
           if (!isFloor(c + dx, r + dz)) return;
@@ -128,7 +128,7 @@ export class Game {
         const g = new THREE.Group();
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.5, 1.7), new THREE.MeshLambertMaterial({ color: pk.color, emissive: pk.color, emissiveIntensity: 0.25 }));
         body.position.y = 1.25; g.add(body);
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 1.9), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, pk.cost + ' pt', pk.color) }));
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 1.9), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, '$' + pk.cost, pk.color) }));
         sign.position.y = 2.9; g.add(sign);
         g.position.set(x, 0, z); this.scene.add(g);
         const l = new THREE.PointLight(pk.color, 6, 9, 1.6); l.position.set(x, 3.2, z); this.scene.add(l);
@@ -146,8 +146,7 @@ export class Game {
     const mtx = new THREE.Matrix4();
     walls.forEach(([x, z], n) => { mtx.makeTranslation(x, WALL_H / 2, z); inst.setMatrixAt(n, mtx); });
     this.scene.add(inst);
-    // porte con lo stesso id formano un unico varco
-    await step(0.5, 'Accendo le luci…');
+        await step(0.5, 'Lighting the lamps…');
 
     const plane = new THREE.PlaneGeometry(W * CELL, H * CELL);
     const floor = new THREE.Mesh(plane, this.mats.floor); floor.rotation.x = -Math.PI / 2; floor.position.set(W * CELL / 2, 0, H * CELL / 2); this.scene.add(floor);
@@ -159,16 +158,16 @@ export class Game {
       const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: col })); bulb.position.copy(l.position); bulb.position.y = WALL_H - 0.15; this.scene.add(bulb);
     });
 
-    // cassa misteriosa: fascio di luce + arma fluttuante
+    // mystery crate: light beam + floating weapon
     this.beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, WALL_H, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0x6fc7ff, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
     this.scene.add(this.beam);
     this.floatGun = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.12), new THREE.MeshBasicMaterial({ color: 0xffe08a }));
     this.floatGun.visible = false; this.scene.add(this.floatGun);
     this.crate = { state: 'idle', t: 0, uses: 0, offer: null, at: null };
     this.setCrate(this.cratePts[1 + Math.floor(Math.random() * (this.cratePts.length - 1))]);
-    await step(0.7, 'Risveglio i non morti…');
+    await step(0.7, 'Waking the dead…');
 
-    // zombie: geometrie e materiali condivisi
+    // zombies: shared geometry and materials
     this.zgeo = {
       torso: new THREE.BoxGeometry(0.52, 0.66, 0.28), head: new THREE.BoxGeometry(0.3, 0.32, 0.3),
       leg: new THREE.BoxGeometry(0.19, 0.82, 0.2).translate(0, -0.41, 0), arm: new THREE.BoxGeometry(0.13, 0.62, 0.13).translate(0, -0.31, 0),
@@ -181,16 +180,16 @@ export class Game {
       eye: new THREE.MeshBasicMaterial({ color: 0xff3a1a }),
     };
     this.zombies = [];
-    // particelle di sangue
+    // blood particles
     this.parts = [];
     const pg = new THREE.BoxGeometry(0.07, 0.07, 0.07), pm = new THREE.MeshBasicMaterial({ color: 0x8a0f0a });
     for (let i = 0; i < 40; i++) { const m = new THREE.Mesh(pg, pm); m.visible = false; this.scene.add(m); this.parts.push({ m, life: 0, vx: 0, vy: 0, vz: 0 }); }
     this.partI = 0;
     this.tracer = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.7 }));
     this.tracer.frustumCulled = false; this.tracer.visible = false; this.scene.add(this.tracer);
-    await step(0.85, 'Carico le armi…');
+    await step(0.85, 'Loading weapons…');
 
-    // giocatore
+    // player
     this.p = {
       x: this.spawnPt.x, z: this.spawnPt.z, y: 0, vy: 0, vx: 0, vz: 0, yaw: 0, pitch: 0,
       hp: 100, maxHp: 100, lastHit: 99, points: 500, perks: new Set(), windUses: 0,
@@ -203,14 +202,14 @@ export class Game {
     this.giveWeapon(this.profile.starter);
     this.round = 0; this.toSpawn = 0; this.spawnT = 0; this.phase = 'inter'; this.phaseT = 4;
     this.stats = { kills: 0, heads: 0, xp: 0, points: 500, round: 0 };
-    this.fieldT = 0; this.groanT = 3; this.msgT = 0; this.flashT = 0; this.tracerT = 0; this.hitT = 0;
+    this.killT = 0; this.dmgT = 0; this.fieldT = 0; this.groanT = 3; this.msgT = 0; this.flashT = 0; this.tracerT = 0; this.hitT = 0;
     this.applySettings();
     this.computeField();
     this.renderer.compile(this.scene, this.camera);
-    await step(1, 'Pronto');
+    await step(1, 'Ready');
   }
 
-  // ---------- utilità griglia ----------
+  // ---------- grid helpers ----------
   cell(x, z) { const c = Math.floor(x / CELL), r = Math.floor(z / CELL); return (c < 0 || r < 0 || c >= W || r >= H) ? -1 : r * W + c; }
   solidAt(x, z) { const i = this.cell(x, z); return i < 0 || this.solid[i] === 1; }
   collide(o, rad) {
@@ -243,7 +242,7 @@ export class Game {
     return true;
   }
 
-  // ---------- armi ----------
+  // ---------- weapons ----------
   weaponDef(id) {
     const d = { ...WEAPONS[id], id, head: 2, adsZoom: 0.75, adsMove: 0.55 };
     const att = (this.profile.weapons[id] && this.profile.weapons[id].att) || [];
@@ -279,7 +278,7 @@ export class Game {
     add(new THREE.BoxGeometry(0.012, 0.03, 0.012), M.metal, 0, bh / 2 + 0.012, -bl + 0.02);
     if ((this.profile.weapons[w.id].att || []).includes('sight')) add(new THREE.BoxGeometry(0.04, 0.045, 0.06), M.metal, 0, bh / 2 + 0.03, -bl * 0.35);
     if (w.def.cls === 'energy') add(new THREE.BoxGeometry(bw * 1.1, bh * 0.5, 0.1), new THREE.MeshBasicMaterial({ color: 0x57e0ff }), 0, 0, -bl);
-    // braccio
+    // arm
     add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zmat.cloth[1], 0.03, -0.12, 0.25).rotation.y = -0.12;
     this.flash.position.set(0, bh * 0.1, -bl - bl * 0.35 - 0.05); vm.add(this.flash);
     this.muzzleZ = -bl * 1.35;
@@ -312,7 +311,7 @@ export class Game {
       dir.copy(fwd).addScaledVector(right, Math.cos(a) * s).addScaledVector(up, Math.sin(a) * s).normalize();
       let tWall = 80;
       for (let t = 0.2; t < 80; t += 0.2) { const y = o.y + dir.y * t; if (y < 0 || y > WALL_H || this.solidAt(o.x + dir.x * t, o.z + dir.z * t)) { tWall = t; break; } }
-      // colpisce in ordine di distanza; i fucili potenti trapassano
+      // hits resolve nearest first; heavy rifles pierce
       let pierce = d.cls === 'sniper' ? 4 : d.cls === 'lmg' ? 2 : 1, dmgK = 1;
       const hits = [];
       for (const z of this.zombies) { if (z.state === 'dead') continue; const h = this.rayZombie(o, dir, z, assist); if (h && h.t < tWall) hits.push([h, z]); }
@@ -376,7 +375,12 @@ export class Game {
       pt.vx = rand(-2, 2); pt.vy = rand(0.5, 3); pt.vz = rand(-2, 2);
     }
   }
-  addPoints(n) { this.p.points += n; this.stats.points += n; }
+  addPoints(n) {
+    this.p.points += n; this.stats.points += n;
+    const box = $('hud-pop'); if (box.childElementCount > 6) box.firstChild.remove();
+    const el = document.createElement('span'); el.textContent = '+' + n; el.style.setProperty('--dx', (Math.random() * 40 - 10).toFixed(0) + 'px');
+    box.appendChild(el); setTimeout(() => el.remove(), 900);
+  }
   addXp(n, wid) {
     this.profile.xp += n; this.stats.xp += n;
     if (wid && this.profile.weapons[wid]) this.profile.weapons[wid].xp += n;
@@ -391,10 +395,10 @@ export class Game {
     this.stats.kills++;
     this.addPoints(knife ? 120 : head ? 90 : 50);
     this.addXp(head ? 15 : 10, wid);
-    sfx('kill');
+    this.killT = 0.25; sfx('kill');
   }
 
-  // ---------- zombie ----------
+  // ---------- zombies ----------
   spawnZombie() {
     const p = this.p;
     let c = this.spawns.filter(s => this.dist[s.i] >= 0 && Math.hypot(s.x - p.x, s.z - p.z) > 6);
@@ -457,9 +461,9 @@ export class Game {
         z.face = Math.atan2(dx, dz);
         if (dp < 1.3 && !down) {
           z.atk -= dt;
-          if (z.atk <= 0) { z.atk = 1.05; this.damagePlayer(50); }
+          if (z.atk <= 0) { z.atk = 1.05; this.damagePlayer(50, z); }
         } else z.atk = Math.max(z.atk, 0.4);
-        // separazione dagli altri zombie
+        // separation from other zombies
         for (let m = 0; m < n; m++) {
           const o = zs[m]; if (o.state !== 'chase') continue;
           const ex = z.x - o.x, ez = z.z - o.z, e2 = ex * ex + ez * ez;
@@ -479,13 +483,14 @@ export class Game {
       P.torso.rotation.z = s * 0.06; P.head.rotation.z = -s * 0.1;
     }
   }
-  damagePlayer(n) {
+  damagePlayer(n, from) {
     const p = this.p; if (p.invuln > 0 || p.downT > 0 || this.over) return;
     p.hp -= n; p.lastHit = 0; sfx('hurt');
+    if (from) { this.dmgFrom = { x: from.x, z: from.z }; this.dmgT = 1.1; }
     if (p.hp > 0) return;
     if (p.perks.has('wind')) {
       p.downT = 5; p.hp = 1; p.perks.clear(); p.inv.length = Math.min(p.inv.length, 2); p.cur = Math.min(p.cur, p.inv.length - 1);
-      p.maxHp = 100; this.buildViewModel(); sfx('down'); this.message('A TERRA — Second Wind ti rialza…', 4.5);
+      p.maxHp = 100; this.buildViewModel(); sfx('down'); this.message('DOWNED — Second Wind is getting you up…', 4.5);
     } else this.gameOver();
   }
   gameOver() {
@@ -496,7 +501,7 @@ export class Game {
     this.hooks.onEnd(this.stats);
   }
 
-  // ---------- interazioni ----------
+  // ---------- interactions ----------
   setCrate(it) {
     if (this.crate.at) this.crate.at.mesh.material = this.mats.crate;
     this.crate.at = it; this.crate.state = 'idle'; this.crate.uses = 0;
@@ -505,24 +510,24 @@ export class Game {
   }
   promptFor(it) {
     const p = this.p;
-    if (it.type === 'door') return it.open ? null : { text: `Apri il passaggio`, cost: it.cost };
-    if (it.type === 'wall') { const d = WEAPONS[it.wid]; return this.has(it.wid) ? { text: `Munizioni ${d.name}`, cost: d.cost / 2 } : { text: `Compra ${d.name}`, cost: d.cost }; }
+    if (it.type === 'door') return it.open ? null : { text: 'Clear the passage', cost: it.cost };
+    if (it.type === 'wall') { const d = WEAPONS[it.wid]; return this.has(it.wid) ? { text: `Buy ammo · ${d.name}`, cost: d.cost / 2 } : { text: `Buy ${d.name}`, cost: d.cost }; }
     if (it.type === 'perk') {
       if (p.perks.has(it.perk.id)) return null;
-      if (it.perk.id === 'wind' && p.windUses >= 3) return { text: 'Second Wind esaurito', cost: -1 };
+      if (it.perk.id === 'wind' && p.windUses >= 3) return { text: 'Second Wind sold out', cost: -1 };
       return { text: `${it.perk.name} — ${it.perk.desc}`, cost: it.perk.cost };
     }
     if (it.type === 'crate') {
       if (it !== this.crate.at) return null;
-      if (this.crate.state === 'idle') return { text: 'Cassa misteriosa', cost: CRATE_COST };
-      if (this.crate.state === 'ready') return { text: `Prendi ${WEAPONS[this.crate.offer].name}`, cost: 0 };
+      if (this.crate.state === 'idle') return { text: 'Mystery Crate', cost: CRATE_COST };
+      if (this.crate.state === 'ready') return { text: `Take ${WEAPONS[this.crate.offer].name}`, cost: 0 };
     }
     return null;
   }
   interact(it, pr) {
     const p = this.p;
     if (pr.cost < 0) { sfx('deny'); return; }
-    if (p.points < pr.cost) { sfx('deny'); this.message('Punti insufficienti', 1.2); return; }
+    if (p.points < pr.cost) { sfx('deny'); this.message('Not enough points', 1.2); return; }
     p.points -= pr.cost;
     if (pr.cost > 0) sfx('buy');
     if (it.type === 'door') {
@@ -535,7 +540,7 @@ export class Game {
       p.perks.add(it.perk.id);
       if (it.perk.id === 'hide') { p.maxHp = 250; p.hp = 250; }
       if (it.perk.id === 'wind') p.windUses++;
-      this.message(it.perk.name + ' attivo', 1.5);
+      this.message(it.perk.name + ' active', 1.5);
     } else if (it.type === 'crate') {
       const c = this.crate;
       if (c.state === 'idle') {
@@ -561,7 +566,7 @@ export class Game {
       if (c.t <= 0) {
         if (c.moving) {
           c.state = 'leave'; c.t = 1.8; this.p.points += CRATE_COST; fg.material.color.set(0xff3a1a);
-          this.message('La cassa si sposta! Punti rimborsati', 2.5); sfx('deny');
+          this.message('The crate is moving! Points refunded', 2.5); sfx('deny');
         } else { c.state = 'ready'; c.t = 9; fg.material.color.set(0xffe08a); fg.scale.x = 1; }
       }
     } else if (c.state === 'ready') {
@@ -596,14 +601,14 @@ export class Game {
         this.addXp(40 * this.round);
         this.profile.best.round = Math.max(this.profile.best.round, this.round);
         saveProfile(this.profile);
-        this.message('Round superato', 2.5);
+        this.message('Round survived', 2.5);
       }
       this.left = alive + this.toSpawn;
     }
   }
   message(text, dur, big) { const el = $('hud-msg'); el.textContent = text; el.className = big ? 'big show' : 'show'; this.msgT = dur; }
 
-  // ---------- giocatore ----------
+  // ---------- player ----------
   updatePlayer(dt) {
     const p = this.p, inp = this.input, w = this.weapon, s = this.profile.settings;
     p.yaw -= inp.look.x * (p.adsK > 0.5 ? w.def.adsZoom + 0.15 : 1);
@@ -627,15 +632,15 @@ export class Game {
     if (p.y > 0 || p.vy > 0) { p.vy -= 15 * dt; p.y += p.vy * dt; if (p.y <= 0) { p.y = 0; p.vy = 0; } }
     if (moving && p.y === 0) p.bob += dt * (sprinting ? 13 : 9);
 
-    // salute
+    // health
     p.lastHit += dt; p.invuln = Math.max(0, p.invuln - dt);
     if (p.lastHit > 4.5 && p.hp < p.maxHp && !down) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * dt * 0.6);
     if (down) {
       p.downT -= dt;
-      if (p.downT <= 0) { p.hp = p.maxHp; p.invuln = 3; p.lastHit = 0; this.message('Di nuovo in piedi!', 1.5); }
+      if (p.downT <= 0) { p.hp = p.maxHp; p.invuln = 3; p.lastHit = 0; this.message('Back on your feet!', 1.5); }
     }
 
-    // armi
+    // weapons
     p.fireCd -= dt; p.knifeCd -= dt;
     if (p.swapT > 0) p.swapT -= dt;
     if (p.reloadT > 0) {
@@ -644,7 +649,7 @@ export class Game {
     }
     if (inp.consume('swap')) this.swap();
     if (inp.consume('knife')) this.knife();
-    // interazione
+    // interaction
     let near = null, nd = 1e9, pr = null;
     for (const it of this.inter) { const d = Math.hypot(it.x - p.x, it.z - p.z); if (d < it.r && d < nd) { const q = this.promptFor(it); if (q) { near = it; nd = d; pr = q; } } }
     const useKey = inp.consume('use'), ur = inp.consume('usereload');
@@ -656,7 +661,7 @@ export class Game {
     if (inp.fire && p.fireCd <= 0 && p.reloadT <= 0 && p.swapT <= 0 && p.knifeCd <= 0.35 && !sprinting && (cw.def.auto || !p.prevFire)) this.shoot();
     p.prevFire = inp.fire;
 
-    // camera + arma in mano
+    // camera + view model
     p.recoil = Math.max(0, p.recoil - dt * 0.35 - p.recoil * dt * 6);
     p.kickZ += (0 - p.kickZ) * Math.min(1, dt * 12);
     const cam = this.camera;
@@ -677,27 +682,43 @@ export class Game {
     const set = (id, v, prop = 'textContent') => { if (c[id] !== v) { c[id] = v; $(id)[prop] = v; } };
     set('hud-points', String(p.points));
     set('hud-round', String(this.round || ''));
-    set('hud-ammo', p.reloadT > 0 ? 'RICARICA' : `${w.mag} / ${w.reserve}`);
+    set('hud-mag', String(w.mag)); set('hud-res', String(w.reserve));
+    const low = w.mag <= Math.max(1, Math.floor(w.def.mag * 0.25));
+    if (c.magCls !== low) { c.magCls = low; $('hud-mag').className = low ? 'low' : ''; }
+    set('hud-warn', p.reloadT > 0 ? 'RELOADING' : w.mag === 0 && w.reserve === 0 ? 'NO AMMO' : low && w.reserve > 0 ? 'RELOAD' : low ? 'LOW AMMO' : '');
     set('hud-weapon', w.def.name);
-    set('hud-left', this.phase === 'active' ? `Zombie: ${this.left || 0}` : '');
+    set('hud-left', this.phase === 'active' ? `${this.left || 0} REMAINING` : this.round ? 'ROUND CLEAR' : 'GET READY');
     const perks = [...p.perks].join(',');
     if (c.perks !== perks) {
       c.perks = perks;
-      $('hud-perks').innerHTML = Object.values(PERKS).filter(k => p.perks.has(k.id)).map(k => `<span style="background:${k.color}">${k.short}</span>`).join('');
+      $('hud-perks').innerHTML = Object.values(PERKS).filter(k => p.perks.has(k.id)).map(k => `<span style="--c:${k.color}">${k.short}</span>`).join('');
     }
     const pr = this.nearPr;
-    const key = this.input.isTouch ? '' : this.input.gamepadName ? '[X] ' : '[F] ';
-    set('hud-prompt', pr ? key + pr.text + (pr.cost > 0 ? `  [${pr.cost}]` : '') : '');
+    const key = this.input.isTouch ? '' : `<kbd>${this.input.gamepadName ? 'X' : 'F'}</kbd>`;
+    const afford = pr && p.points >= pr.cost;
+    set('hud-prompt', pr ? `${key}<span>${pr.text}</span>` + (pr.cost > 0 ? `<b class="${afford ? '' : 'no'}">${pr.cost}</b>` : '') : '', 'innerHTML');
     if (c.useVis !== !!pr) { c.useVis = !!pr; $('btn-use').style.display = pr ? 'flex' : 'none'; }
     const vg = clamp(1 - p.hp / p.maxHp, 0, 1) * 0.85 + (p.downT > 0 ? 0.3 : 0);
     $('vignette').style.opacity = vg.toFixed(2);
-    $('hitmarker').style.opacity = this.hitT > 0 ? 1 : 0;
-    $('crosshair').style.opacity = (p.adsK > 0.6 && w.def.cls !== 'shotgun') || p.sprinting ? 0.25 : 1;
+    const hm = $('hitmarker'); hm.style.opacity = this.hitT > 0 || this.killT > 0 ? 1 : 0;
+    if (c.kill !== (this.killT > 0)) { c.kill = this.killT > 0; hm.className = c.kill ? 'kill' : ''; }
+    if (this.killT > 0) this.killT -= this.dt;
+    const ch = $('crosshair');
+    ch.style.opacity = (p.adsK > 0.6 && w.def.cls !== 'shotgun') || p.sprinting ? 0 : 1;
+    ch.style.setProperty('--gap', (5 + w.def.spread * 260 + Math.min(14, Math.hypot(p.vx, p.vz) * 1.3) + p.kickZ * 90).toFixed(1) + 'px');
+    const dd = $('dmg-dir');
+    if (this.dmgT > 0) {
+      this.dmgT -= this.dt;
+      const dx = this.dmgFrom.x - p.x, dz = this.dmgFrom.z - p.z, sn = Math.sin(p.yaw), cs = Math.cos(p.yaw);
+      dd.style.transform = `rotate(${Math.atan2(cs * dx - sn * dz, -sn * dx - cs * dz).toFixed(2)}rad)`;
+      dd.style.opacity = Math.min(1, this.dmgT * 1.5).toFixed(2);
+    } else if (c.dd !== 0) { dd.style.opacity = 0; }
+    c.dd = this.dmgT > 0 ? 1 : 0;
     $('stamina').style.width = (p.stamina * 100).toFixed(0) + '%';
     if (this.msgT > 0) { this.msgT -= this.dt; if (this.msgT <= 0) $('hud-msg').className = ''; }
   }
 
-  // ---------- ciclo ----------
+  // ---------- loop ----------
   start() { this.running = true; this.paused = false; this.last = performance.now(); this.input.active = true; this.input.reset(); requestAnimationFrame(this.loop); }
   setPaused(v) {
     if (this.over) return;

@@ -1,4 +1,4 @@
-// Profilo persistente: XP giocatore, XP armi, accessori, impostazioni.
+// Persistent profile: player XP, weapon XP, attachments, settings.
 import { WEAPONS } from './data.js';
 
 const KEY = 'notte-rossa-profile-v1';
@@ -22,17 +22,17 @@ export function loadProfile() {
       p.settings = Object.assign(defaults().settings, raw.settings || {});
       p.best = Object.assign(defaults().best, raw.best || {});
     }
-  } catch (e) { /* storage non disponibile: si gioca senza salvataggio */ }
+  } catch (e) { /* storage unavailable: play without saving */ }
   for (const id in WEAPONS) if (!p.weapons[id]) p.weapons[id] = { xp: 0, att: [] };
   if (!WEAPONS[p.starter]) p.starter = 'vesper';
   return p;
 }
 
 export function saveProfile(p) {
-  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* ignora */ }
+  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
 }
 
-// XP totale necessario per raggiungere il livello n
+// Total XP needed to reach level n
 const need = (n, k) => k * n * (n - 1) / 2;
 function levelOf(xp, k, max) {
   let l = 1;
