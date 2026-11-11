@@ -21,7 +21,7 @@ Locally: run `python3 -m http.server` in the folder and open `http://localhost:8
 - Points per hit and per kill (more for headshots and knife kills).
 - 7 wall weapons (ammo refills at half price) and a 950-point Mystery Crate that moves between 4 spots.
 - Perk machines are Asian street-food vending machines (noodle cups, bento, onigiri, steamed buns, canned tea), dark until the power is on.
-- Set dressing in every room: barrels, benches, crate stacks, luggage, trolleys. They block movement like walls.
+- Set dressing in every room: barrels, benches, crate stacks, luggage, trolleys. They block movement like walls. Nine more are scanned CC0 props from Poly Haven (bins, payphone, storage cart, generator, tool chest, ladder, Chinese cabinet and tea table, fire extinguisher), fetched and decimated by `tools/fetch_polyhaven.py`.
 - 5 perks: Second Wind (self-revive), Iron Hide (250 health), Quick Hands (reload), Twin Tap (fire rate and damage), Pack Rat (third weapon).
 - Lobby with starting weapon, player and weapon levels, 7 attachments (max 3 per weapon). Progress is saved in `localStorage`.
 - Main menu, loading screens, pause, settings (sensitivity, FOV, volume, quality, Y axis, left-handed layout).

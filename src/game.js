@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.min.js';
-import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS, PROPS } from './data.js';
+import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS, PROPS, PROP_OPTS } from './data.js';
 import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
 import { loadAssets } from './assets.js';
@@ -224,13 +224,17 @@ export class Game {
       const c = pc + MAP_OX, r = pr + MAP_OY, i = r * W + c;
       if (MAP[r][c] !== '.') return;
       this.solid[i] = 1;
-      const src = A.models.props && A.models.props.getObjectByName('prop_' + type);
+      const src = type.startsWith('ph_') ? A.models[type] : A.models.props && A.models.props.getObjectByName('prop_' + type);
       const o = src ? src.clone(true) : new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 1.4).translate(0, 0.5, 0), this.mats.crate);
-      // benches sit with their back to the nearest wall; everything else gets a varied turn
+      const opt = PROP_OPTS[type];
       const wall = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dz]) => !isFloor(c + dx, r + dz)) || [0, -1];
-      o.rotation.y = type === 'bench' ? Math.atan2(-wall[0], -wall[1]) : n * 1.7;
-      const push = type === 'bench' ? 0.75 : 0;
-      o.position.set(cx(c) + wall[0] * push, 0, cz(r) + wall[1] * push); this.scene.add(o);
+      // wall-aligned props keep their back to the nearest wall; loose piles get a varied turn
+      o.rotation.order = 'YXZ';
+      o.rotation.y = opt ? Math.atan2(-wall[0], -wall[1]) : n * 1.7;
+      if (opt && opt.tilt) o.rotation.x = opt.tilt;
+      if (opt && opt.scale && src) o.scale.setScalar(opt.scale);
+      const push = opt ? opt.push : 0;
+      o.position.set(cx(c) + wall[0] * push, (opt && opt.y) || 0, cz(r) + wall[1] * push); this.scene.add(o);
     });
     const inst = new THREE.InstancedMesh(box, this.mats.wall, walls.length);
     const mtx = new THREE.Matrix4();

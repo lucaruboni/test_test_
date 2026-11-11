@@ -68,7 +68,15 @@ export const WEAPONS = {
 export const PROPS = [
   [1, 8, 'barrels'], [5, 8, 'luggage'], [5, 6, 'bench'], [1, 1, 'crates'], [7, 1, 'trolley'], [21, 13, 'barrels'], [21, 7, 'bench'], [7, 7, 'bench'],
   [23, 1, 'crates'], [23, 6, 'barrels'], [23, 8, 'luggage'], [31, 8, 'bench'], [17, 15, 'crates'], [11, 18, 'barrels'], [21, 1, 'luggage'],
+  // scanned props from Poly Haven (CC0)
+  [1, 13, 'ph_trash'], [23, 13, 'ph_trash'], [5, 1, 'ph_payphone'], [12, 5, 'ph_cart'], [16, 6, 'ph_generator'], [17, 18, 'ph_generator'], [16, 1, 'ph_toolchest'],
+  [17, 13, 'ph_ladder'], [25, 1, 'ph_cabinet'], [29, 8, 'ph_teatable'], [31, 5, 'ph_extinguisher'],
 ];
+// Placement tweaks: push = metres toward the nearest wall, y = mounting height, scale, tilt = lean against the wall (radians).
+export const PROP_OPTS = {
+  bench: { push: 0.75 }, ph_trash: { push: 0.9 }, ph_payphone: { push: 1.08, y: 1.05, scale: 1.2 }, ph_cart: { push: 0.55 }, ph_generator: { push: 0.85 },
+  ph_toolchest: { push: 0.95 }, ph_ladder: { push: 0.85, tilt: -0.2 }, ph_cabinet: { push: 0.92, scale: 0.8 }, ph_teatable: { push: 0.6 }, ph_extinguisher: { push: 1.0 },
+};
 
 export const WALLBUYS = { a: 'warden', b: 'sawtooth', c: 'hornet', d: 'kestrel', e: 'bulldog', f: 'viper', g: 'trident' };
 export const CRATE_POOL = ['anvil', 'longbow', 'reaper', 'talon', 'arc', 'magnate', 'tercet', 'kestrel', 'viper', 'trident', 'bulldog'];
