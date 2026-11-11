@@ -16,6 +16,9 @@ const TIPS = [
   'Iron Hide lets you take five hits instead of two.',
   'Levelling a weapon unlocks its attachments in the lobby.',
   'Keep the last zombie alive to shop in peace.',
+  'Boards on a window buy you time. Each repair pays 10 points.',
+  'The power lever is in the main hall. Perk machines stay dark until you pull it.',
+  'The teleporter in the main hall leads to the Reforge bench.',
 ];
 
 const SCREENS = ['loading', 'menu', 'lobby', 'settings', 'controls', 'pause', 'over', 'quit'];
@@ -110,6 +113,7 @@ async function startMatch() {
   await sleep(60);
   if (game) game.destroy();
   game = new Game($('view'), profile, input, { onPause: pause, onEnd: endMatch });
+  if (window.__hook) window.__g = game;
   await game.build(loading);
   await sleep(250);
   hideScreens();

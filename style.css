@@ -115,7 +115,7 @@ h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .form output { width: 40px; text-align: right; font-family: var(--display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--gold); }
 .form input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--blood); }
 .form select { font: inherit; padding: 3px 8px; background: #15161a; color: var(--ink); border: 1px solid var(--line); border-radius: 0; }
-.help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; font-size: 15px; line-height: 1.45; }
+.help { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; font-size: 15px; line-height: 1.45; }
 .help p { margin: 0; color: #cfc9bb; }
 #over-stats { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 0; width: 100%; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 6px; }
 #over-stats div { padding: 10px 6px 6px; border-left: 1px solid var(--line); }
@@ -191,6 +191,13 @@ h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .touch #hud-msg:not(.big) { top: 32%; font-size: 15px; }
 #btn-pause { pointer-events: auto; position: absolute; right: max(12px, calc(var(--sr) + 4px)); top: max(10px, var(--st)); width: 42px; height: 38px; border: 1px solid var(--line); background: var(--plate); display: flex; align-items: center; justify-content: center; gap: 5px; z-index: 3; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); cursor: pointer; }
 #btn-pause i { width: 3px; height: 14px; background: var(--ink); }
+
+#hud-power { position: absolute; left: 50%; top: max(10px, var(--st)); transform: translateX(-50%); display: flex; gap: 8px; }
+#hud-power span { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px 2px; background: var(--plate); border-bottom: 2px solid var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 0.22em; white-space: nowrap; }
+#hud-power b { font-family: var(--display); font-size: 22px; font-weight: 500; line-height: 0.9; color: var(--gold); letter-spacing: 0; }
+#tp-flash { position: absolute; inset: 0; background: #d8f6ff; opacity: 0; }
+#tp-flash.go { animation: tpflash 0.9s ease-out; }
+@keyframes tpflash { from { opacity: 1; } to { opacity: 0; } }
 
 /* ---------- touch controls ---------- */
 #touch { position: absolute; inset: 0; pointer-events: auto; display: none; text-shadow: none; }

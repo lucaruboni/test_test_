@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.min.js';
-import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST } from './data.js';
+import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS } from './data.js';
 import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
 
@@ -66,11 +66,14 @@ export class Game {
     const step = async (p, label) => { progress(p, label); await new Promise(r => setTimeout(r, 30)); };
     await step(0.1, 'Securing the station…');
     this.solid = new Uint8Array(W * H);
+    this.pblock = new Uint8Array(W * H); this.nook = new Uint8Array(W * H);
+    this.windows = []; this.winAt = {}; this.pads = {}; this.perkLights = []; this.perkBodies = []; this.drops = [];
+    this.power = false; this.tpCd = 0; this.buff = { insta: 0, double: 0 }; this.dropsLeft = 4;
     this.dist = new Int16Array(W * H).fill(-1);
     this.queue = new Int32Array(W * H);
     this.spawns = []; this.inter = []; this.doors = {}; this.cratePts = [];
     const cx = c => (c + 0.5) * CELL, cz = r => (r + 0.5) * CELL;
-    const isFloor = (c, r) => c >= 0 && r >= 0 && c < W && r < H && '.zP'.includes(MAP[r][c]);
+    const isFloor = (c, r) => c >= 0 && r >= 0 && c < W && r < H && '.PTt'.includes(MAP[r][c]);
 
     const wallTex = canvasTex(128, 128, (g, w, h) => {
       grain(g, w, h, '#4a4640', 1400, 0.25);
@@ -97,15 +100,56 @@ export class Game {
       metal: new THREE.MeshLambertMaterial({ color: 0x3a3d44 }),
       crate: new THREE.MeshLambertMaterial({ color: 0x4d3a22 }),
       crateOn: new THREE.MeshLambertMaterial({ color: 0x8a6a2a, emissive: 0x3a2a00 }),
+      plank: new THREE.MeshLambertMaterial({ map: doorTex, color: 0xc9b08a }),
     };
     await step(0.3, 'Raising the walls…');
 
     const walls = [];
+    const plankGeo = new THREE.BoxGeometry(CELL * 0.98, 0.3, 0.07);
     const box = new THREE.BoxGeometry(CELL, WALL_H, CELL);
     for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
       const ch = MAP[r][c], i = r * W + c, x = cx(c), z = cz(r);
       if (ch === '#') { this.solid[i] = 1; walls.push([x, z]); }
-      else if (ch === 'z') this.spawns.push({ x, z, i });
+      else if (ch === 'z') { this.spawns.push({ x, z, i }); this.nook[i] = 1; }
+      else if (ch === 'w') {
+        // barricaded window: zombies pass once the boards are gone, the player never does
+        this.pblock[i] = 1;
+        const horiz = MAP[r][c - 1] !== '.' && MAP[r][c + 1] !== '.' && (MAP[r][c - 1] === '#' || MAP[r][c + 1] === '#') && !(MAP[r][c - 1] === 'z' || MAP[r][c + 1] === 'z');
+        const lint = new THREE.Mesh(new THREE.BoxGeometry(CELL, 1.1, CELL), this.mats.wall); lint.position.set(x, WALL_H - 0.55, z); this.scene.add(lint);
+        const meshes = [];
+        for (let b = 0; b < 6; b++) {
+          const m = new THREE.Mesh(plankGeo, this.mats.plank);
+          m.position.set(x + (horiz ? 0 : (b % 2 ? 0.1 : -0.1)), 0.32 + b * 0.47, z + (horiz ? (b % 2 ? 0.1 : -0.1) : 0));
+          m.rotation.set(0, horiz ? 0 : Math.PI / 2, (Math.random() - 0.5) * 0.2); this.scene.add(m); meshes.push(m);
+        }
+        const win = { type: 'window', x, z, i, r: CELL / 2 + 1.45, boards: 6, meshes };
+        this.windows.push(win); this.winAt[i] = win; this.inter.push(win);
+      } else if (ch === 'L') {
+        this.solid[i] = 1; walls.push([x, z]);
+        const dir = [[0, 1], [0, -1], [1, 0], [-1, 0]].find(([dx, dz]) => isFloor(c + dx, r + dz)) || [0, 1];
+        const g = new THREE.Group(); g.position.set(x + dir[0] * (CELL / 2 + 0.07), 1.5, z + dir[1] * (CELL / 2 + 0.07)); g.rotation.y = Math.atan2(dir[0], dir[1]);
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.12), this.mats.metal));
+        this.leverArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08).translate(0, 0.25, 0), new THREE.MeshLambertMaterial({ color: 0xb02a20 }));
+        this.leverArm.position.z = 0.08; this.leverArm.rotation.x = 0.7; g.add(this.leverArm);
+        this.leverLamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); this.leverLamp.position.set(0, 0.55, 0.05); g.add(this.leverLamp);
+        this.scene.add(g);
+        this.inter.push({ type: 'power', x: g.position.x, z: g.position.z, r: 2 });
+      } else if (ch === 'T' || ch === 't') {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.08, 24), new THREE.MeshBasicMaterial({ color: 0x1c2a30 })); m.position.set(x, 0.04, z); this.scene.add(m);
+        const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, WALL_H, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x57e0ff, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }));
+        ring.position.set(x, WALL_H / 2, z); ring.visible = false; this.scene.add(ring);
+        this.pads[ch] = { x, z, m, ring };
+        this.inter.push({ type: 'tp', x, z, r: 1.5, to: ch === 'T' ? 't' : 'T' });
+      } else if (ch === 'U') {
+        this.solid[i] = 1;
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 2.2, 1.9), this.mats.metal); body.position.y = 1.1; g.add(body);
+        const core = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.5, 1.95), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); core.position.y = 1.2; g.add(core);
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 2), new THREE.MeshBasicMaterial({ map: labelTex('REFORGE', '$' + FORGE_COST, '#ff8a2a') })); sign.position.y = 2.6; g.add(sign);
+        g.position.set(x, 0, z); this.scene.add(g);
+        const l = new THREE.PointLight(0xff8a2a, 14, 14, 1.5); l.position.set(x + 1.6, 2.6, z); this.scene.add(l);
+        this.inter.push({ type: 'forge', x, z, r: CELL / 2 + 1.5 });
+      }
       else if (ch === 'P') this.spawnPt = { x, z };
       else if (DOORS[ch]) {
         this.solid[i] = 1;
@@ -126,12 +170,14 @@ export class Game {
         this.solid[i] = 1;
         const pk = PERKS[ch];
         const g = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.5, 1.7), new THREE.MeshLambertMaterial({ color: pk.color, emissive: pk.color, emissiveIntensity: 0.25 }));
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.5, 1.7), new THREE.MeshLambertMaterial({ color: pk.color, emissive: pk.color, emissiveIntensity: pk.id === 'wind' ? 0.3 : 0.03 }));
+        if (pk.id !== 'wind') this.perkBodies.push(body);
         body.position.y = 1.25; g.add(body);
         const sign = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 1.9), new THREE.MeshBasicMaterial({ map: labelTex(pk.name, '$' + pk.cost, pk.color) }));
         sign.position.y = 2.9; g.add(sign);
         g.position.set(x, 0, z); this.scene.add(g);
-        const l = new THREE.PointLight(pk.color, 6, 9, 1.6); l.position.set(x, 3.2, z); this.scene.add(l);
+        const l = new THREE.PointLight(pk.color, pk.id === 'wind' ? 6 : 0, 9, 1.6); l.position.set(x, 3.2, z); this.scene.add(l);
+        if (pk.id !== 'wind') this.perkLights.push(l);
         this.inter.push({ type: 'perk', perk: pk, x, z, r: CELL / 2 + 1.5 });
       } else if (ch === 'X') {
         this.solid[i] = 1;
@@ -153,7 +199,8 @@ export class Game {
     const ceil = new THREE.Mesh(plane, this.mats.ceil); ceil.rotation.x = Math.PI / 2; ceil.position.set(W * CELL / 2, WALL_H, H * CELL / 2); this.scene.add(ceil);
     this.scene.add(new THREE.AmbientLight(0x8a90a8, 1.5));
     this.scene.add(new THREE.HemisphereLight(0x9aa4c0, 0x3a2a20, 0.7));
-    [[3, 3, 0xffc890], [3, 10.5, 0xffd9a0], [10, 3.5, 0xa8c0ff], [18, 10, 0xa8c0ff], [14, 8, 0xffb070], [27, 3.5, 0xffc890], [27, 10.5, 0xff9a80]].forEach(([c, r, col]) => {
+    [[3, 3, 0xffc890], [3, 10.5, 0xffd9a0], [10, 3.5, 0xa8c0ff], [18, 10, 0xa8c0ff], [14, 8, 0xffb070], [27, 3.5, 0xffc890], [27, 10.5, 0xff9a80], [14, 16.5, 0xffb070]].forEach(([c0, r0, col]) => {
+      const c = c0 + MAP_OX, r = r0 + MAP_OY;
       const l = new THREE.PointLight(col, 22, 22, 1.5); l.position.set(cx(c), WALL_H - 0.5, cz(r)); this.scene.add(l);
       const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: col })); bulb.position.copy(l.position); bulb.position.y = WALL_H - 0.15; this.scene.add(bulb);
     });
@@ -194,7 +241,7 @@ export class Game {
       x: this.spawnPt.x, z: this.spawnPt.z, y: 0, vy: 0, vx: 0, vz: 0, yaw: 0, pitch: 0,
       hp: 100, maxHp: 100, lastHit: 99, points: 500, perks: new Set(), windUses: 0,
       inv: [], cur: 0, fireCd: 0, reloadT: 0, swapT: 0, knifeCd: 0, stamina: 1, downT: 0, invuln: 0,
-      recoil: 0, kickZ: 0, bob: 0, adsK: 0, prevFire: false,
+      recoil: 0, kickZ: 0, bob: 0, adsK: 0, prevFire: false, repairCd: 0,
     };
     this.vm = new THREE.Group(); this.vm.scale.setScalar(0.3); this.camera.add(this.vm);
     this.flash = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.95, depthWrite: false }));
@@ -212,10 +259,10 @@ export class Game {
   // ---------- grid helpers ----------
   cell(x, z) { const c = Math.floor(x / CELL), r = Math.floor(z / CELL); return (c < 0 || r < 0 || c >= W || r >= H) ? -1 : r * W + c; }
   solidAt(x, z) { const i = this.cell(x, z); return i < 0 || this.solid[i] === 1; }
-  collide(o, rad) {
+  collide(o, rad, player) {
     const c0 = Math.floor((o.x - rad) / CELL), c1 = Math.floor((o.x + rad) / CELL), r0 = Math.floor((o.z - rad) / CELL), r1 = Math.floor((o.z + rad) / CELL);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-      if (c >= 0 && r >= 0 && c < W && r < H && !this.solid[r * W + c]) continue;
+      if (c >= 0 && r >= 0 && c < W && r < H && !this.solid[r * W + c] && !(player && this.pblock[r * W + c])) continue;
       const nx = clamp(o.x, c * CELL, (c + 1) * CELL), nz = clamp(o.z, r * CELL, (r + 1) * CELL);
       const dx = o.x - nx, dz = o.z - nz, d2 = dx * dx + dz * dz;
       if (d2 < rad * rad) {
@@ -238,12 +285,12 @@ export class Game {
   }
   los(x0, z0, x1, z1) {
     const dx = x1 - x0, dz = z1 - z0, d = Math.hypot(dx, dz), n = Math.ceil(d / 0.5);
-    for (let i = 1; i < n; i++) if (this.solidAt(x0 + dx * i / n, z0 + dz * i / n)) return false;
+    for (let i = 1; i < n; i++) { const ci = this.cell(x0 + dx * i / n, z0 + dz * i / n); if (ci < 0 || this.solid[ci] || this.pblock[ci]) return false; }
     return true;
   }
 
   // ---------- weapons ----------
-  weaponDef(id) {
+  weaponDef(id, up) {
     const d = { ...WEAPONS[id], id, head: 2, adsZoom: 0.75, adsMove: 0.55 };
     const att = (this.profile.weapons[id] && this.profile.weapons[id].att) || [];
     if (att.includes('extmag')) d.mag = Math.ceil(d.mag * 1.35);
@@ -254,6 +301,7 @@ export class Game {
     if (att.includes('stock')) d.adsMove = 1;
     if (att.includes('fmj')) d.head = 2.6;
     if (d.cls === 'sniper') d.adsZoom = 0.3;
+    if (up) { d.up = true; d.name += ' Mk II'; d.dmg *= 2.2; d.mag = Math.min(Math.ceil(d.mag * 1.5), d.mag + 40); d.reserve = Math.round(d.reserve * 1.5); d.reload *= 0.9; }
     return d;
   }
   get weapon() { return this.p.inv[this.p.cur]; }
@@ -277,6 +325,7 @@ export class Game {
     if (w.def.cls !== 'pistol') add(new THREE.BoxGeometry(bw * 0.8, bh * 0.8, 0.2), M.dark, 0, -0.01, 0.1);
     add(new THREE.BoxGeometry(0.012, 0.03, 0.012), M.metal, 0, bh / 2 + 0.012, -bl + 0.02);
     if ((this.profile.weapons[w.id].att || []).includes('sight')) add(new THREE.BoxGeometry(0.04, 0.045, 0.06), M.metal, 0, bh / 2 + 0.03, -bl * 0.35);
+    if (w.def.up) add(new THREE.BoxGeometry(bw * 1.06, bh * 0.22, bl * 0.7), new THREE.MeshBasicMaterial({ color: 0xff8a2a }), 0, 0, -bl * 0.5);
     if (w.def.cls === 'energy') add(new THREE.BoxGeometry(bw * 1.1, bh * 0.5, 0.1), new THREE.MeshBasicMaterial({ color: 0x57e0ff }), 0, 0, -bl);
     // arm
     add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zmat.cloth[1], 0.03, -0.12, 0.25).rotation.y = -0.12;
@@ -376,6 +425,7 @@ export class Game {
     }
   }
   addPoints(n) {
+    if (this.buff.double > 0) n *= 2;
     this.p.points += n; this.stats.points += n;
     const box = $('hud-pop'); if (box.childElementCount > 6) box.firstChild.remove();
     const el = document.createElement('span'); el.textContent = '+' + n; el.style.setProperty('--dx', (Math.random() * 40 - 10).toFixed(0) + 'px');
@@ -388,6 +438,7 @@ export class Game {
   hurt(z, dmg, head, wid, knife, hitSet) {
     if (z.state === 'dead') return;
     if (!hitSet.has(z)) { hitSet.add(z); this.addPoints(10); }
+    if (this.buff.insta > 0) dmg = z.hp;
     z.hp -= dmg; z.stun = 0.12;
     if (z.hp > 0) return;
     z.state = 'dead'; z.t = 0;
@@ -396,6 +447,8 @@ export class Game {
     this.addPoints(knife ? 120 : head ? 90 : 50);
     this.addXp(head ? 15 : 10, wid);
     this.killT = 0.25; sfx('kill');
+    const zi = this.cell(z.x, z.z);
+    if (this.dropsLeft > 0 && zi >= 0 && !this.nook[zi] && !this.pblock[zi] && Math.random() < 0.035) { this.dropsLeft--; this.dropPower(z.x, z.z); }
   }
 
   // ---------- zombies ----------
@@ -443,6 +496,15 @@ export class Game {
         let tx = p.x, tz = p.z;
         const dp = Math.hypot(p.x - z.x, p.z - z.z);
         const ci = this.cell(z.x, z.z), d = ci >= 0 ? this.dist[ci] : -1;
+        // player unreachable (teleported away): go back into the spawn queue
+        if (d < 0) { z.lost = (z.lost || 0) + dt; if (z.lost > 2) { this.scene.remove(z.g); zs.splice(n, 1); if (this.phase === 'active') this.toSpawn++; continue; } } else z.lost = 0;
+        const wn = this.winAt[ci]; let hold = false;
+        if (wn && wn.boards > 0) {
+          hold = true;
+          if (!z.held) { z.held = true; z.hx = z.x; z.hz = z.z; z.tear = 1.3; } else { z.x = z.hx; z.z = z.hz; }
+          z.tear -= dt;
+          if (z.tear <= 0) { z.tear = 1.3; wn.boards--; wn.meshes[wn.boards].visible = false; sfx('deny'); }
+        } else z.held = false;
         if (d > 1 && !(dp < 7 && this.los(z.x, z.z, p.x, p.z))) {
           let bi = -1, bd = d; const c = ci % W, r = (ci / W) | 0;
           for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
@@ -456,7 +518,7 @@ export class Game {
         }
         let dx = tx - z.x, dz = tz - z.z; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
         z.stun = Math.max(0, z.stun - dt);
-        const sp = down ? 0 : z.speed * (z.stun > 0 ? 0.35 : 1);
+        const sp = down || hold ? 0 : z.speed * (z.stun > 0 ? 0.35 : 1);
         if (dp > 0.95) { z.x += dx * sp * dt; z.z += dz * sp * dt; z.ph += sp * dt * 2.6; }
         z.face = Math.atan2(dx, dz);
         if (dp < 1.3 && !down) {
@@ -508,12 +570,54 @@ export class Game {
     it.mesh.material = this.mats.crateOn;
     this.beam.position.set(it.x, WALL_H / 2, it.z); this.beam.visible = true;
   }
+  powerOn() {
+    this.power = true; sfx('round');
+    this.perkLights.forEach(l => l.intensity = 6); this.perkBodies.forEach(b => b.material.emissiveIntensity = 0.3);
+    this.leverArm.rotation.x = 2.3; this.leverLamp.material.color.set(0x3fe06a);
+    for (const k in this.pads) { this.pads[k].m.material.color.set(0x2aa8c8); this.pads[k].ring.visible = true; }
+    this.message('POWER ON', 3, true);
+  }
+  dropPower(x, z) {
+    const keys = Object.keys(POWERUPS), type = keys[Math.floor(Math.random() * keys.length)];
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), new THREE.MeshBasicMaterial({ color: POWERUPS[type].color }));
+    m.position.set(x, 1, z); this.scene.add(m);
+    this.drops.push({ type, x, z, t: 26, m });
+  }
+  applyPower(type) {
+    const p = this.p, P = POWERUPS[type];
+    sfx('buy'); this.message(P.name, 2.2);
+    if (P.time) this.buff[type] = P.time;
+    else if (type === 'ammo') p.inv.forEach(w => { w.reserve = w.def.reserve; });
+    else if (type === 'repair') { this.windows.forEach(w => { w.boards = 6; w.meshes.forEach(m => m.visible = true); }); this.addPoints(200); }
+    else if (type === 'blast') { for (const z of this.zombies) if (z.state !== 'dead') { z.state = 'dead'; z.t = 0; this.stats.kills++; } this.addPoints(400); }
+  }
+  updateDrops(dt) {
+    const p = this.p;
+    this.buff.insta = Math.max(0, this.buff.insta - dt); this.buff.double = Math.max(0, this.buff.double - dt);
+    this.tpCd = Math.max(0, this.tpCd - dt); p.repairCd = Math.max(0, p.repairCd - dt);
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i]; d.t -= dt;
+      d.m.rotation.y += dt * 2.5; d.m.position.y = 1 + Math.sin(d.t * 3) * 0.12; d.m.visible = d.t > 6 || Math.floor(d.t * 6) % 2 === 0;
+      const got = Math.hypot(d.x - p.x, d.z - p.z) < 1.3;
+      if (got) this.applyPower(d.type);
+      if (got || d.t <= 0) { this.scene.remove(d.m); d.m.geometry.dispose(); this.drops.splice(i, 1); }
+    }
+  }
   promptFor(it) {
     const p = this.p;
     if (it.type === 'door') return it.open ? null : { text: 'Clear the passage', cost: it.cost };
     if (it.type === 'wall') { const d = WEAPONS[it.wid]; return this.has(it.wid) ? { text: `Buy ammo · ${d.name}`, cost: d.cost / 2 } : { text: `Buy ${d.name}`, cost: d.cost }; }
+    if (it.type === 'window') return it.boards < 6 && p.repairCd <= 0 ? { text: 'Repair barrier', cost: 0 } : null;
+    if (it.type === 'power') return this.power ? null : { text: 'Turn on the power', cost: 0 };
+    if (it.type === 'tp') {
+      if (!this.power) return { text: 'Teleporter offline — power required', cost: -1 };
+      if (this.tpCd > 0) return { text: 'Teleporter recharging', cost: -1 };
+      return { text: it.to === 't' ? 'Teleport to the workshop' : 'Teleport back to the station', cost: 0 };
+    }
+    if (it.type === 'forge') { const w = this.weapon; return w.def.up ? { text: `${w.def.name} is already reforged`, cost: -1 } : { text: `Reforge ${w.def.name}`, cost: FORGE_COST }; }
     if (it.type === 'perk') {
       if (p.perks.has(it.perk.id)) return null;
+      if (!this.power && it.perk.id !== 'wind') return { text: `${it.perk.name} — power required`, cost: -1 };
       if (it.perk.id === 'wind' && p.windUses >= 3) return { text: 'Second Wind sold out', cost: -1 };
       return { text: `${it.perk.name} — ${it.perk.desc}`, cost: it.perk.cost };
     }
@@ -536,6 +640,17 @@ export class Game {
     } else if (it.type === 'wall') {
       const w = this.has(it.wid);
       if (w) { w.reserve = w.def.reserve; w.mag = w.def.mag; } else this.giveWeapon(it.wid);
+    } else if (it.type === 'window') {
+      it.meshes[it.boards].visible = true; it.boards++; p.repairCd = 0.45; this.addPoints(10); sfx('reload');
+    } else if (it.type === 'power') {
+      this.powerOn();
+    } else if (it.type === 'tp') {
+      const d = this.pads[it.to]; p.x = d.x; p.z = d.z; p.vx = p.vz = 0; this.tpCd = 5; p.invuln = Math.max(p.invuln, 1.5);
+      this.computeField(); sfx('energy');
+      const f = $('tp-flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+    } else if (it.type === 'forge') {
+      const w = this.weapon; w.def = this.weaponDef(w.id, true); w.mag = w.def.mag; w.reserve = w.def.reserve; p.reloadT = 0; p.swapT = 0.6;
+      this.buildViewModel(); this.message(w.def.name + ' ready', 2);
     } else if (it.type === 'perk') {
       p.perks.add(it.perk.id);
       if (it.perk.id === 'hide') { p.maxHp = 250; p.hp = 250; }
@@ -582,7 +697,7 @@ export class Game {
     if (this.phase === 'inter') {
       this.phaseT -= dt;
       if (this.phaseT <= 0) {
-        this.round++; this.phase = 'active';
+        this.round++; this.phase = 'active'; this.dropsLeft = 4;
         const r = this.round;
         this.toSpawn = Math.round(5 + r * 2.6 + r * r * 0.16);
         this.spawnT = 1;
@@ -627,7 +742,7 @@ export class Game {
     const k = Math.min(1, dt * (p.y > 0 ? 3 : 13));
     p.vx += (tvx - p.vx) * k; p.vz += (tvz - p.vz) * k;
     this.lastSafe = { x: p.x, z: p.z };
-    p.x += p.vx * dt; p.z += p.vz * dt; this.collide(p, PR);
+    p.x += p.vx * dt; p.z += p.vz * dt; this.collide(p, PR, true);
     if (inp.consume('jump') && p.y === 0 && !down) p.vy = 5.2;
     if (p.y > 0 || p.vy > 0) { p.vy -= 15 * dt; p.y += p.vy * dt; if (p.y <= 0) { p.y = 0; p.vy = 0; } }
     if (moving && p.y === 0) p.bob += dt * (sprinting ? 13 : 9);
@@ -688,6 +803,8 @@ export class Game {
     set('hud-warn', p.reloadT > 0 ? 'RELOADING' : w.mag === 0 && w.reserve === 0 ? 'NO AMMO' : low && w.reserve > 0 ? 'RELOAD' : low ? 'LOW AMMO' : '');
     set('hud-weapon', w.def.name);
     set('hud-left', this.phase === 'active' ? `${this.left || 0} REMAINING` : this.round ? 'ROUND CLEAR' : 'GET READY');
+    const bf = Object.keys(this.buff).filter(k => this.buff[k] > 0).map(k => `<span>${POWERUPS[k].name}<b>${Math.ceil(this.buff[k])}</b></span>`).join('');
+    set('hud-power', bf, 'innerHTML');
     const perks = [...p.perks].join(',');
     if (c.perks !== perks) {
       c.perks = perks;
@@ -738,6 +855,7 @@ export class Game {
     this.updateRounds(dt);
     this.updateZombies(dt);
     this.updateCrate(dt);
+    this.updateDrops(dt);
     for (const pt of this.parts) if (pt.life > 0) {
       pt.life -= dt; pt.vy -= 12 * dt; pt.m.position.x += pt.vx * dt; pt.m.position.y += pt.vy * dt; pt.m.position.z += pt.vz * dt;
       if (pt.life <= 0) pt.m.visible = false;

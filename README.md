@@ -13,6 +13,10 @@ Locally: run `python3 -m http.server` in the folder and open `http://localhost:8
 ## What's in it
 
 - Map "North Station": 5 rooms, 5 passages to clear with points.
+- Barricaded windows: zombies spawn outside and tear the boards down; repair them for 10 points a board.
+- Power lever in the main hall: turns on the perk machines (Second Wind works without it) and the teleporter.
+- Teleporter to an isolated workshop with the Reforge bench (5000 points): upgrades the weapon in your hands to Mk II.
+- Power-up drops: Full Ammo, One-Shot (30 s), Double Points (30 s), Blast, Rebuild. Up to 4 per round.
 - Rounds with rising zombie count, health and speed; at most 24 alive at once.
 - Points per hit and per kill (more for headshots and knife kills).
 - 7 wall weapons (ammo refills at half price) and a 950-point Mystery Crate that moves between 4 spots.
