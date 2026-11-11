@@ -2,7 +2,7 @@
 import * as THREE from '../lib/three.module.min.js';
 import { GLTFLoader } from '../lib/GLTFLoader.js';
 
-const MODELS = { pistol: 'service_pistol', rifle: 'bolt_action_rifle_7_62', crate: 'wooden_military_crate', lamp: 'hanging_industrial_lamp', powerbox: 'power_box_01' };
+const MODELS = { pistol: 'service_pistol', crate: 'wooden_military_crate', lamp: 'hanging_industrial_lamp', powerbox: 'power_box_01' };
 const TEXTURES = { wall: 'dark_brick_wall_diff', wallN: 'dark_brick_wall_nor', floor: 'concrete_floor_worn_001_diff', floorN: 'concrete_floor_worn_001_nor', plank: 'old_planks_02_diff' };
 const HIDE = /bullet|magazine|wrap|_b$/i;
 let cache = null;

@@ -3,6 +3,7 @@ import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_C
 import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
 import { loadAssets } from './assets.js';
+import { makeZombieKit, buildGun, hasGun } from './models.js';
 
 const W = MAP[0].length, H = MAP.length;
 const EYE = 1.7, PR = 0.4, ZR = 0.36, MAX_ALIVE = 24;
@@ -224,17 +225,7 @@ export class Game {
     await step(0.7, 'Waking the dead…');
 
     // zombies: shared geometry and materials
-    this.zgeo = {
-      torso: new THREE.BoxGeometry(0.52, 0.66, 0.28), head: new THREE.BoxGeometry(0.3, 0.32, 0.3),
-      leg: new THREE.BoxGeometry(0.19, 0.82, 0.2).translate(0, -0.41, 0), arm: new THREE.BoxGeometry(0.13, 0.62, 0.13).translate(0, -0.31, 0),
-      eye: new THREE.BoxGeometry(0.06, 0.04, 0.02),
-    };
-    this.zmat = {
-      skin: new THREE.MeshLambertMaterial({ color: 0x7d8a6a }),
-      cloth: [0x4a4034, 0x35404a, 0x4a3535, 0x3c4636].map(c => new THREE.MeshLambertMaterial({ color: c })),
-      pants: new THREE.MeshLambertMaterial({ color: 0x25262b }),
-      eye: new THREE.MeshBasicMaterial({ color: 0xff3a1a }),
-    };
+    this.zkit = makeZombieKit();
     this.zombies = [];
     // blood particles
     this.parts = [];
@@ -328,7 +319,18 @@ export class Game {
     const [bw, bh, bl] = dims, M = this.mats;
     const add = (g, m, x, y, z) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); vm.add(o); return o; };
     // real model when one is loaded for this weapon class
-    const cls = w.def.cls, src = this.assets.models[cls === 'pistol' ? 'pistol' : cls === 'energy' ? '' : 'rifle'];
+    const cls = w.def.cls, src = hasGun(w.id) ? null : this.assets.models.pistol;
+    const sleeve = () => {
+      const a = add(new THREE.CapsuleGeometry(0.05, 0.42, 3, 8), this.zkit.sleeve, 0.035, -0.15, 0.3); a.rotation.set(Math.PI / 2 - 0.2, 0, 0.1);
+      add(new THREE.SphereGeometry(0.04, 8, 6), this.zkit.skin, 0.012, -0.105, 0.02).scale.set(0.9, 1.15, 1.1);
+    };
+    if (hasGun(w.id)) {
+      const b = buildGun(w.id, { up: w.def.up, sight: (this.profile.weapons[w.id].att || []).includes('sight') });
+      vm.add(b.g); sleeve();
+      this.flash.position.set(0, b.flashY, b.muzzleZ - 0.06); vm.add(this.flash);
+      this.muzzleZ = b.muzzleZ;
+      return;
+    }
     if (src) {
       const g = src.clone(true), pistol = cls === 'pistol', sc = pistol ? 1.5 : cls === 'smg' ? 0.5 : cls === 'sniper' ? 0.72 : 0.62;
       g.scale.setScalar(sc); g.rotation.y = Math.PI / 2;
@@ -336,7 +338,7 @@ export class Game {
       if (w.def.up) g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); if (o.material.emissive) o.material.emissive.set(0x4a2200); } });
       vm.add(g);
       const mz = pistol ? -0.3 : -0.76 * sc / 0.62;
-      add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zmat.cloth[1], 0.03, -0.14, 0.27).rotation.y = -0.12;
+      sleeve();
       this.flash.position.set(0, 0.01, mz - 0.06); vm.add(this.flash);
       this.muzzleZ = mz;
       return;
@@ -351,7 +353,7 @@ export class Game {
     if (w.def.up) add(new THREE.BoxGeometry(bw * 1.06, bh * 0.22, bl * 0.7), new THREE.MeshBasicMaterial({ color: 0xff8a2a }), 0, 0, -bl * 0.5);
     if (w.def.cls === 'energy') add(new THREE.BoxGeometry(bw * 1.1, bh * 0.5, 0.1), new THREE.MeshBasicMaterial({ color: 0x57e0ff }), 0, 0, -bl);
     // arm
-    add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zmat.cloth[1], 0.03, -0.12, 0.25).rotation.y = -0.12;
+    add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zkit.sleeve, 0.03, -0.12, 0.25).rotation.y = -0.12;
     this.flash.position.set(0, bh * 0.1, -bl - bl * 0.35 - 0.05); vm.add(this.flash);
     this.muzzleZ = -bl * 1.35;
   }
@@ -482,17 +484,8 @@ export class Game {
     if (!c.length) return false;
     c.sort((a, b) => this.dist[a.i] - this.dist[b.i]);
     const s = c[Math.floor(Math.random() * Math.min(c.length, 4))];
-    const r = this.round, Z = this.zgeo, M = this.zmat;
-    const g = new THREE.Group(); g.rotation.order = 'YXZ';
-    const cloth = M.cloth[Math.floor(Math.random() * M.cloth.length)];
-    const mk = (geo, mat, x, y, zz) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, zz); g.add(m); return m; };
-    const parts = {
-      torso: mk(Z.torso, cloth, 0, 1.15, 0), head: mk(Z.head, M.skin, 0, 1.64, 0.02),
-      l1: mk(Z.leg, M.pants, -0.14, 0.82, 0), l2: mk(Z.leg, M.pants, 0.14, 0.82, 0),
-      a1: mk(Z.arm, M.skin, -0.33, 1.42, 0), a2: mk(Z.arm, M.skin, 0.33, 1.42, 0),
-    };
-    const e1 = new THREE.Mesh(Z.eye, M.eye), e2 = new THREE.Mesh(Z.eye, M.eye);
-    e1.position.set(-0.07, 0.03, 0.155); e2.position.set(0.07, 0.03, 0.155); parts.head.add(e1, e2);
+    const r = this.round;
+    const { g, parts } = this.zkit.build();
     this.scene.add(g);
     const hp = r < 10 ? 130 + 95 * (r - 1) : (130 + 95 * 8) * Math.pow(1.1, r - 9);
     const speed = Math.min(6.4, 1.5 + r * 0.22 + Math.random() * Math.min(2.4, 0.4 + r * 0.25));
@@ -562,10 +555,13 @@ export class Game {
       let df = z.face - g.rotation.y; while (df > Math.PI) df -= 6.283; while (df < -Math.PI) df += 6.283;
       g.rotation.y += df * Math.min(1, dt * 8);
       const s = Math.sin(z.ph);
-      P.l1.rotation.x = s * 0.6; P.l2.rotation.x = -s * 0.6;
-      const reach = z.atk < 0.4 ? -1.9 + z.atk * 2 : -1.35;
-      P.a1.rotation.x = reach + s * 0.12; P.a2.rotation.x = reach - s * 0.12;
-      P.torso.rotation.z = s * 0.06; P.head.rotation.z = -s * 0.1;
+      // shambling walk: hips swing, the trailing knee bends, arms reach and lunge on attack
+      P.l1.rotation.x = -s * 0.55; P.l2.rotation.x = s * 0.55;
+      P.k1.rotation.x = Math.max(0, -s) * 0.9 + 0.08; P.k2.rotation.x = Math.max(0, s) * 0.9 + 0.08;
+      const reach = (z.atk < 0.4 ? -2.0 + z.atk * 2 : -1.25) - P.lean;
+      P.a1.rotation.x = reach + s * 0.14 + P.drop; P.a2.rotation.x = reach - s * 0.14;
+      P.a1.rotation.z = 0.12; P.a2.rotation.z = -0.12;
+      P.torso.rotation.z = s * 0.07; P.torso.rotation.x = P.lean + Math.abs(s) * 0.05; P.head.rotation.z = -s * 0.12;
     }
   }
   damagePlayer(n, from) {
