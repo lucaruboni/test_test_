@@ -1,13 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Notte Rossa">
+<meta name="theme-color" content="#07080b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Notte Rossa</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-   <p>ciaociaociao</p>
-   <h1>ciao di nuovo</h1> 
+<canvas id="view"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="hitmarker">✕</div>
+  <div id="hud-round"></div>
+  <div id="hud-left"></div>
+  <div id="hud-tr"><div id="hud-points">500</div><div id="hud-perks"></div></div>
+  <div id="hud-br"><div id="hud-weapon"></div><div id="hud-ammo"></div><div id="stamina-bar"><div id="stamina"></div></div></div>
+  <div id="hud-prompt"></div>
+  <div id="hud-msg"></div>
+  <div id="touch">
+    <div id="stick"><div id="knob"></div></div>
+    <div class="tb" id="btn-fire" data-btn="fire">FUOCO</div>
+    <div class="tb" id="btn-ads" data-btn="ads">MIRA</div>
+    <div class="tb" id="btn-reload" data-btn="reload">RIC.</div>
+    <div class="tb" id="btn-swap" data-btn="swap">ARMA</div>
+    <div class="tb" id="btn-knife" data-btn="knife">LAMA</div>
+    <div class="tb" id="btn-jump" data-btn="jump">SALTO</div>
+    <div class="tb" id="btn-sprint" data-btn="sprint">CORSA</div>
+    <div class="tb" id="btn-use" data-btn="use">USA</div>
+  </div>
+  <button id="btn-pause" aria-label="Pausa">II</button>
+</div>
+
+<!-- Caricamento -->
+<section id="s-loading" class="screen">
+  <h1 class="logo">NOTTE <b>ROSSA</b></h1>
+  <p id="load-label">Caricamento…</p>
+  <div class="bar"><div id="load-bar"></div></div>
+  <p class="tip" id="load-tip"></p>
+</section>
+
+<!-- Menu principale -->
+<section id="s-menu" class="screen hidden">
+  <h1 class="logo">NOTTE <b>ROSSA</b></h1>
+  <p class="sub">Sopravvivenza a round · Stazione Nord</p>
+  <div class="col">
+    <button class="btn primary" data-go="lobby">GIOCA</button>
+    <button class="btn" data-go="settings">IMPOSTAZIONI</button>
+    <button class="btn" data-go="controls">COMANDI</button>
+    <button class="btn" data-go="quit">ESCI</button>
+  </div>
+  <p class="foot" id="pad-status">Nessun controller collegato</p>
+</section>
+
+<!-- Lobby -->
+<section id="s-lobby" class="screen hidden">
+  <header><h2>LOBBY</h2><div id="lobby-player"></div></header>
+  <div class="lobby">
+    <div class="panel"><h3>Arma iniziale</h3><div id="lobby-starters" class="cards"></div>
+      <h3>Record</h3><p id="lobby-best"></p></div>
+    <div class="panel"><h3>Armeria</h3><div id="lobby-weapons" class="list"></div></div>
+    <div class="panel"><h3 id="att-title">Accessori</h3><div id="lobby-att" class="list"></div></div>
+  </div>
+  <footer><button class="btn" data-go="menu">INDIETRO</button><button class="btn primary" data-go="play">INIZIA PARTITA</button></footer>
+</section>
+
+<!-- Impostazioni -->
+<section id="s-settings" class="screen overlay hidden">
+  <h2>IMPOSTAZIONI</h2>
+  <div class="form">
+    <label>Sensibilità visuale <input type="range" id="set-sens" min="0.3" max="2.5" step="0.05"><output id="o-sens"></output></label>
+    <label>Campo visivo (FOV) <input type="range" id="set-fov" min="60" max="100" step="1"><output id="o-fov"></output></label>
+    <label>Volume <input type="range" id="set-vol" min="0" max="1" step="0.05"><output id="o-vol"></output></label>
+    <label>Qualità grafica <select id="set-quality"><option value="0">Bassa</option><option value="1">Media</option><option value="2">Alta</option></select></label>
+    <label>Inverti asse Y <input type="checkbox" id="set-invert"></label>
+    <label>Comandi per mancini <input type="checkbox" id="set-lefty"></label>
+  </div>
+  <button class="btn primary" data-go="back">FATTO</button>
+</section>
+
+<!-- Comandi -->
+<section id="s-controls" class="screen overlay hidden">
+  <h2>COMANDI</h2>
+  <div class="help">
+    <div><h3>Touch</h3><p>Metà sinistra: joystick (spingi a fondo per correre)<br>Metà destra: trascina per guardare<br>Pulsanti: fuoco, mira, ricarica, cambio arma, lama, salto, usa</p></div>
+    <div><h3>Controller</h3><p>Levette: movimento / visuale<br>RT fuoco · LT mira · X usa/ricarica<br>Y cambio arma · A salto · B lama<br>L3 corsa · RB ricarica · Start pausa</p></div>
+    <div><h3>Tastiera</h3><p>WASD · mouse · Shift corsa · Spazio salto<br>R ricarica · F usa · Q cambio · V lama · Esc pausa</p></div>
+  </div>
+  <button class="btn primary" data-go="back">FATTO</button>
+</section>
+
+<!-- Pausa -->
+<section id="s-pause" class="screen overlay hidden">
+  <h2>PAUSA</h2>
+  <div class="col">
+    <button class="btn primary" data-go="resume">RIPRENDI</button>
+    <button class="btn" data-go="settings">IMPOSTAZIONI</button>
+    <button class="btn" data-go="controls">COMANDI</button>
+    <button class="btn" data-go="abandon">ABBANDONA PARTITA</button>
+  </div>
+</section>
+
+<!-- Fine partita -->
+<section id="s-over" class="screen overlay hidden">
+  <h2 class="red">SEI CADUTO</h2>
+  <div id="over-stats"></div>
+  <button class="btn primary" data-go="lobby">TORNA ALLA LOBBY</button>
+</section>
+
+<!-- Uscita -->
+<section id="s-quit" class="screen hidden">
+  <h1 class="logo">NOTTE <b>ROSSA</b></h1>
+  <p class="sub">Grazie per aver giocato. Ora puoi chiudere l'app.</p>
+  <button class="btn" data-go="menu">TORNA AL MENU</button>
+</section>
+
+<div id="rotate"><p>Ruota il telefono in orizzontale</p></div>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>
