@@ -38,4 +38,4 @@ Locally: run `python3 -m http.server` in the folder and open `http://localhost:8
 
 ## Layout
 
-`index.html`, `style.css`, `src/` (`data.js` data, `game.js` engine, `input.js`, `audio.js`, `save.js`, `main.js` UI), `lib/three.module.min.js` (three.js r170, MIT). Fonts (Teko, Barlow Condensed) load from Google Fonts.
+`index.html`, `style.css`, `src/` (`data.js` data, `game.js` engine, `input.js`, `audio.js`, `save.js`, `main.js` UI), `lib/` (three.js r170 and its glTF loader, MIT), `assets/` (CC0 models and textures from Poly Haven, see `assets/LICENSE.md`). If an asset fails to load the game falls back to built-in shapes. Fonts (Teko, Barlow Condensed) load from Google Fonts.

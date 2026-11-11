@@ -2,6 +2,7 @@ import * as THREE from '../lib/three.module.min.js';
 import { CELL, WALL_H, MAP, DOORS, WEAPONS, WALLBUYS, CRATE_POOL, PERKS, CRATE_COST, FORGE_COST, MAP_OX, MAP_OY, POWERUPS } from './data.js';
 import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
+import { loadAssets } from './assets.js';
 
 const W = MAP[0].length, H = MAP.length;
 const EYE = 1.7, PR = 0.4, ZR = 0.36, MAX_ALIVE = 24;
@@ -64,7 +65,10 @@ export class Game {
   // ---------- world build ----------
   async build(progress) {
     const step = async (p, label) => { progress(p, label); await new Promise(r => setTimeout(r, 30)); };
-    await step(0.1, 'Securing the station…');
+    progress(0.02, 'Downloading models and textures…');
+    const A = this.assets = await loadAssets(f => progress(0.02 + f * 0.1, 'Downloading models and textures…'));
+    const model = (k, scale) => { if (!A.models[k]) return null; const o = A.models[k].clone(true); o.scale.setScalar(scale); return o; };
+    await step(0.14, 'Securing the station…');
     this.solid = new Uint8Array(W * H);
     this.pblock = new Uint8Array(W * H); this.nook = new Uint8Array(W * H);
     this.windows = []; this.winAt = {}; this.pads = {}; this.perkLights = []; this.perkBodies = []; this.drops = [];
@@ -92,16 +96,18 @@ export class Game {
       g.strokeStyle = '#8a1c14'; g.lineWidth = 10; g.beginPath(); g.moveTo(10, 10); g.lineTo(118, 118); g.moveTo(118, 10); g.lineTo(10, 118); g.stroke();
     });
     this.mats = {
-      wall: new THREE.MeshLambertMaterial({ map: wallTex }),
-      floor: new THREE.MeshLambertMaterial({ map: floorTex }),
+      wall: new THREE.MeshLambertMaterial(A.tex.wall ? { map: A.tex.wall, normalMap: A.tex.wallN || null, color: 0xb9b2aa } : { map: wallTex }),
+      floor: new THREE.MeshLambertMaterial(A.tex.floor ? { map: A.tex.floor, normalMap: A.tex.floorN || null } : { map: floorTex }),
       ceil: new THREE.MeshLambertMaterial({ color: 0x1c1b1a }),
       door: new THREE.MeshLambertMaterial({ map: doorTex }),
       dark: new THREE.MeshLambertMaterial({ color: 0x1d1f24 }),
       metal: new THREE.MeshLambertMaterial({ color: 0x3a3d44 }),
       crate: new THREE.MeshLambertMaterial({ color: 0x4d3a22 }),
       crateOn: new THREE.MeshLambertMaterial({ color: 0x8a6a2a, emissive: 0x3a2a00 }),
-      plank: new THREE.MeshLambertMaterial({ map: doorTex, color: 0xc9b08a }),
+      plank: new THREE.MeshLambertMaterial(A.tex.plank ? { map: A.tex.plank } : { map: doorTex, color: 0xc9b08a }),
     };
+    if (A.tex.wall) { A.tex.wall.repeat.set(1, 1.6); if (A.tex.wallN) A.tex.wallN.repeat.set(1, 1.6); }
+    if (A.tex.floor) { A.tex.floor.repeat.set(W * 0.6, H * 0.6); if (A.tex.floorN) A.tex.floorN.repeat.set(W * 0.6, H * 0.6); }
     await step(0.3, 'Raising the walls…');
 
     const walls = [];
@@ -128,10 +134,11 @@ export class Game {
         this.solid[i] = 1; walls.push([x, z]);
         const dir = [[0, 1], [0, -1], [1, 0], [-1, 0]].find(([dx, dz]) => isFloor(c + dx, r + dz)) || [0, 1];
         const g = new THREE.Group(); g.position.set(x + dir[0] * (CELL / 2 + 0.07), 1.5, z + dir[1] * (CELL / 2 + 0.07)); g.rotation.y = Math.atan2(dir[0], dir[1]);
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.12), this.mats.metal));
+        const pb = model('powerbox', 1.9);
+        if (pb) { pb.position.z = 0.02; g.add(pb); } else g.add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.12), this.mats.metal));
         this.leverArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08).translate(0, 0.25, 0), new THREE.MeshLambertMaterial({ color: 0xb02a20 }));
-        this.leverArm.position.z = 0.08; this.leverArm.rotation.x = 0.7; g.add(this.leverArm);
-        this.leverLamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); this.leverLamp.position.set(0, 0.55, 0.05); g.add(this.leverLamp);
+        this.leverArm.position.set(pb ? 0.5 : 0, pb ? -0.2 : 0, 0.08); this.leverArm.rotation.x = 0.7; g.add(this.leverArm);
+        this.leverLamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); this.leverLamp.position.set(pb ? 0.5 : 0, pb ? 0.4 : 0.55, 0.05); g.add(this.leverLamp);
         this.scene.add(g);
         this.inter.push({ type: 'power', x: g.position.x, z: g.position.z, r: 2 });
       } else if (ch === 'T' || ch === 't') {
@@ -181,7 +188,8 @@ export class Game {
         this.inter.push({ type: 'perk', perk: pk, x, z, r: CELL / 2 + 1.5 });
       } else if (ch === 'X') {
         this.solid[i] = 1;
-        const m = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.9, 1.3), this.mats.crate); m.position.set(x, 0.45, z);
+        const cm = model('crate', 1.65);
+        const m = cm || new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.9, 1.3), this.mats.crate); m.position.set(x, cm ? 0 : 0.45, z);
         if (!isFloor(c - 1, r) && !isFloor(c + 1, r)) m.rotation.y = Math.PI / 2;
         this.scene.add(m);
         const it = { type: 'crate', x, z, r: CELL / 2 + 1.5, mesh: m };
@@ -202,7 +210,8 @@ export class Game {
     [[3, 3, 0xffc890], [3, 10.5, 0xffd9a0], [10, 3.5, 0xa8c0ff], [18, 10, 0xa8c0ff], [14, 8, 0xffb070], [27, 3.5, 0xffc890], [27, 10.5, 0xff9a80], [14, 16.5, 0xffb070]].forEach(([c0, r0, col]) => {
       const c = c0 + MAP_OX, r = r0 + MAP_OY;
       const l = new THREE.PointLight(col, 22, 22, 1.5); l.position.set(cx(c), WALL_H - 0.5, cz(r)); this.scene.add(l);
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: col })); bulb.position.copy(l.position); bulb.position.y = WALL_H - 0.15; this.scene.add(bulb);
+      const bulb = model('lamp', 1) || new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: col })); bulb.position.copy(l.position); bulb.position.y = bulb.isMesh ? WALL_H - 0.15 : WALL_H; this.scene.add(bulb);
+      if (!bulb.isMesh) l.position.y = WALL_H - 1.5;
     });
 
     // mystery crate: light beam + floating weapon
@@ -318,6 +327,20 @@ export class Game {
     const dims = { pistol: [0.05, 0.08, 0.24], smg: [0.06, 0.1, 0.4], ar: [0.06, 0.1, 0.62], shotgun: [0.07, 0.09, 0.72], lmg: [0.09, 0.13, 0.74], sniper: [0.06, 0.09, 0.9], energy: [0.1, 0.13, 0.5] }[w.def.cls];
     const [bw, bh, bl] = dims, M = this.mats;
     const add = (g, m, x, y, z) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); vm.add(o); return o; };
+    // real model when one is loaded for this weapon class
+    const cls = w.def.cls, src = this.assets.models[cls === 'pistol' ? 'pistol' : cls === 'energy' ? '' : 'rifle'];
+    if (src) {
+      const g = src.clone(true), pistol = cls === 'pistol', sc = pistol ? 1.5 : cls === 'smg' ? 0.5 : cls === 'sniper' ? 0.72 : 0.62;
+      g.scale.setScalar(sc); g.rotation.y = Math.PI / 2;
+      g.position.set(0, pistol ? -0.1 : -0.05, pistol ? -0.02 : -0.38 * sc / 0.62 + 0.05);
+      if (w.def.up) g.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); if (o.material.emissive) o.material.emissive.set(0x4a2200); } });
+      vm.add(g);
+      const mz = pistol ? -0.3 : -0.76 * sc / 0.62;
+      add(new THREE.BoxGeometry(0.09, 0.09, 0.5), this.zmat.cloth[1], 0.03, -0.14, 0.27).rotation.y = -0.12;
+      this.flash.position.set(0, 0.01, mz - 0.06); vm.add(this.flash);
+      this.muzzleZ = mz;
+      return;
+    }
     add(new THREE.BoxGeometry(bw, bh, bl), M.dark, 0, 0, -bl / 2);
     add(new THREE.BoxGeometry(bw * 0.5, bh * 0.45, bl * 0.35), M.metal, 0, bh * 0.1, -bl - bl * 0.15);
     add(new THREE.BoxGeometry(bw * 0.8, 0.13, 0.06), M.dark, 0, -bh / 2 - 0.05, -0.03).rotation.x = 0.25;
@@ -565,9 +588,9 @@ export class Game {
 
   // ---------- interactions ----------
   setCrate(it) {
-    if (this.crate.at) this.crate.at.mesh.material = this.mats.crate;
+    if (this.crate.at && this.crate.at.mesh.isMesh) this.crate.at.mesh.material = this.mats.crate;
     this.crate.at = it; this.crate.state = 'idle'; this.crate.uses = 0;
-    it.mesh.material = this.mats.crateOn;
+    if (it.mesh.isMesh) it.mesh.material = this.mats.crateOn;
     this.beam.position.set(it.x, WALL_H / 2, it.z); this.beam.visible = true;
   }
   powerOn() {
