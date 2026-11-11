@@ -4,6 +4,7 @@ import { sfx } from './audio.js';
 import { saveProfile } from './save.js';
 import { loadAssets } from './assets.js';
 import { makeZombieKit, buildGun, hasGun } from './models.js';
+import { clone as cloneSkinned } from '../lib/SkeletonUtils.js';
 
 const W = MAP[0].length, H = MAP.length;
 const EYE = 1.7, PR = 0.4, ZR = 0.36, MAX_ALIVE = 24;
@@ -226,6 +227,7 @@ export class Game {
 
     // zombies: shared geometry and materials
     this.zkit = makeZombieKit();
+    this.ztints = [0xffffff, 0xd8c8b8, 0xb8c8d0, 0xc8d8b0].map(c => new THREE.MeshLambertMaterial({ vertexColors: true, color: c }));
     this.zombies = [];
     // blood particles
     this.parts = [];
@@ -485,11 +487,24 @@ export class Game {
     c.sort((a, b) => this.dist[a.i] - this.dist[b.i]);
     const s = c[Math.floor(Math.random() * Math.min(c.length, 4))];
     const r = this.round;
-    const { g, parts } = this.zkit.build();
+    let g, parts, mixer = null, acts = null;
+    const zm = this.assets.models.zombie;
+    if (zm) {
+      // rigged model built in Blender: one skinned mesh, clips "walk" and "attack"
+      const body = cloneSkinned(zm); g = new THREE.Group(); g.rotation.order = 'YXZ'; g.add(body);
+      const tint = this.ztints[Math.floor(Math.random() * this.ztints.length)];
+      let head = null;
+      body.traverse(o => { if (o.isSkinnedMesh) o.material = tint; if (o.isBone && o.name === 'head') head = o; });
+      const sc = 0.95 + Math.random() * 0.1; g.scale.set(sc * (0.94 + Math.random() * 0.14), sc, sc);
+      mixer = new THREE.AnimationMixer(body); acts = {};
+      for (const c of zm.userData.clips) acts[c.name] = mixer.clipAction(c);
+      acts.walk.play(); acts.walk.time = Math.random(); acts.attack.play(); acts.attack.setEffectiveWeight(0);
+      parts = { head: { set visible(v) { if (!v && head) head.scale.setScalar(0.01); } } };
+    } else ({ g, parts } = this.zkit.build());
     this.scene.add(g);
     const hp = r < 10 ? 130 + 95 * (r - 1) : (130 + 95 * 8) * Math.pow(1.1, r - 9);
     const speed = Math.min(6.4, 1.5 + r * 0.22 + Math.random() * Math.min(2.4, 0.4 + r * 0.25));
-    const z = { x: s.x + rand(-0.6, 0.6), z: s.z + rand(-0.6, 0.6), y: -1.8, hp, speed, state: 'rise', t: 0, atk: 0.5, stun: 0, g, parts, ph: Math.random() * 6, ox: rand(-0.7, 0.7), oz: rand(-0.7, 0.7), face: 0, headless: false };
+    const z = { x: s.x + rand(-0.6, 0.6), z: s.z + rand(-0.6, 0.6), y: -1.8, hp, speed, state: 'rise', t: 0, atk: 0.5, stun: 0, g, parts, mixer, acts, aw: 0, ph: Math.random() * 6, ox: rand(-0.7, 0.7), oz: rand(-0.7, 0.7), face: 0, headless: false };
     g.position.set(z.x, z.y, z.z);
     this.zombies.push(z);
     return true;
@@ -554,6 +569,15 @@ export class Game {
       g.position.set(z.x, z.y, z.z);
       let df = z.face - g.rotation.y; while (df > Math.PI) df -= 6.283; while (df < -Math.PI) df += 6.283;
       g.rotation.y += df * Math.min(1, dt * 8);
+      if (z.mixer) {
+        // blend walk and attack; walk speed follows ground speed
+        const want = z.atk < 0.45 || z.held ? 1 : 0;
+        z.aw += (want - z.aw) * Math.min(1, dt * 10);
+        z.acts.attack.setEffectiveWeight(z.aw); z.acts.walk.setEffectiveWeight(1 - z.aw);
+        z.acts.walk.timeScale = z.state === 'chase' && !z.held && p.downT <= 0 ? 0.45 + z.speed * 0.3 : 0.25;
+        z.mixer.update(dt);
+        continue;
+      }
       const s = Math.sin(z.ph);
       // shambling walk: hips swing, the trailing knee bends, arms reach and lunge on attack
       P.l1.rotation.x = -s * 0.55; P.l2.rotation.x = s * 0.55;
