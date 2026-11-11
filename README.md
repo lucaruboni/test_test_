@@ -26,6 +26,8 @@ Locally: run `python3 -m http.server` in the folder and open `http://localhost:8
 
 ## Controls
 
+On touch screens **simple controls** are on by default: the gun fires by itself when a zombie is in your sights, the view is gently pulled toward nearby targets, the knife swings automatically at point-blank range, window barriers repair while you stand next to them, and only FIRE, AIM, RLD, SWAP and USE are shown. Turn it off in Settings for the full manual layout below.
+
 | | Touch | Controller | Keyboard |
 |---|---|---|---|
 | Move | left stick area | left stick | WASD |

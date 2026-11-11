@@ -258,7 +258,7 @@ export class Game {
     this.giveWeapon(this.profile.starter);
     this.round = 0; this.toSpawn = 0; this.spawnT = 0; this.phase = 'inter'; this.phaseT = 4;
     this.stats = { kills: 0, heads: 0, xp: 0, points: 500, round: 0 };
-    this.killT = 0; this.dmgT = 0; this.fieldT = 0; this.groanT = 3; this.msgT = 0; this.flashT = 0; this.tracerT = 0; this.hitT = 0;
+    this.aimHit = null; this.autoT = 0; this.closeZ = null; this.killT = 0; this.dmgT = 0; this.fieldT = 0; this.groanT = 3; this.msgT = 0; this.flashT = 0; this.tracerT = 0; this.hitT = 0;
     this.applySettings();
     this.computeField();
     this.renderer.compile(this.scene, this.camera);
@@ -746,11 +746,37 @@ export class Game {
   }
   message(text, dur, big) { const el = $('hud-msg'); el.textContent = text; el.className = big ? 'big show' : 'show'; this.msgT = dur; }
 
+  // Aim assist for simple touch controls: finds what the crosshair is on (generous hit boxes),
+  // pulls the view gently toward the closest visible zombie near the centre, and flags point-blank ones for the knife.
+  assist(dt) {
+    const p = this.p, o = { x: p.x, y: EYE + p.y, z: p.z }, cp = Math.cos(p.pitch);
+    const d = { x: -Math.sin(p.yaw) * cp, y: Math.sin(p.pitch), z: -Math.cos(p.yaw) * cp };
+    let hit = null, pull = null, pa = 0.2; this.closeZ = null;
+    for (const z of this.zombies) {
+      if (z.state === 'dead' || z.y < -0.6) continue;
+      const dx = z.x - p.x, dz = z.z - p.z, dist = Math.hypot(dx, dz);
+      if (dist > 40) continue;
+      const fwd = (dx * d.x + dz * d.z) / (dist * cp || 1);
+      if (dist < 1.7 && fwd > 0.3) this.closeZ = z;
+      const h = this.rayZombie(o, d, z, 1.9);
+      if (h && (!hit || h.t < hit.t)) hit = h;
+      let dy = Math.atan2(-dx, -dz) - p.yaw; while (dy > Math.PI) dy -= 6.283; while (dy < -Math.PI) dy += 6.283;
+      if (Math.abs(dy) < pa && this.los(p.x, p.z, z.x, z.z)) { pa = Math.abs(dy); pull = { dy, dp: Math.atan2(z.y + 1.25 - o.y, dist) - p.pitch }; }
+    }
+    if (hit) for (let t = 0.3; t < hit.t; t += 0.3) if (this.solidAt(o.x + d.x * t, o.z + d.z * t)) { hit = null; break; }
+    if (pull) { const k = Math.min(1, dt * 3.5); p.yaw += pull.dy * k; p.pitch += clamp(pull.dp, -0.3, 0.3) * k; }
+    this.aimHit = hit; this.autoT = hit ? this.autoT + dt : 0;
+  }
+
   // ---------- player ----------
   updatePlayer(dt) {
     const p = this.p, inp = this.input, w = this.weapon, s = this.profile.settings;
-    p.yaw -= inp.look.x * (p.adsK > 0.5 ? w.def.adsZoom + 0.15 : 1);
-    p.pitch = clamp(p.pitch - inp.look.y * (s.invert ? -1 : 1) * (p.adsK > 0.5 ? w.def.adsZoom + 0.15 : 1), -1.45, 1.45);
+    // simple touch mode: slow the camera on a target, nudge it toward the nearest zombie, fire automatically
+    const easy = s.simple && inp.isTouch && !inp.gamepadName;
+    const lk = (p.adsK > 0.5 ? w.def.adsZoom + 0.15 : 1) * (easy && this.aimHit ? 0.55 : 1);
+    p.yaw -= inp.look.x * lk;
+    p.pitch = clamp(p.pitch - inp.look.y * (s.invert ? -1 : 1) * lk, -1.45, 1.45);
+    if (easy) this.assist(dt); else { this.aimHit = null; this.autoT = 0; }
     const down = p.downT > 0;
     const ads = inp.ads && p.reloadT <= 0 && p.swapT <= 0 && !down;
     p.adsK += ((ads ? 1 : 0) - p.adsK) * Math.min(1, dt * 14);
@@ -787,16 +813,18 @@ export class Game {
     }
     if (inp.consume('swap')) this.swap();
     if (inp.consume('knife')) this.knife();
+    if (easy && this.closeZ && p.knifeCd <= 0 && (p.reloadT > 0 || this.weapon.mag === 0 || !this.aimHit)) this.knife();
     // interaction
     let near = null, nd = 1e9, pr = null;
     for (const it of this.inter) { const d = Math.hypot(it.x - p.x, it.z - p.z); if (d < it.r && d < nd) { const q = this.promptFor(it); if (q) { near = it; nd = d; pr = q; } } }
     const useKey = inp.consume('use'), ur = inp.consume('usereload');
-    if (near && (useKey || ur) && !down) this.interact(near, pr);
+    if (near && (useKey || ur || (easy && near.type === 'window')) && !down) this.interact(near, pr);
     else if (ur) this.startReload();
     if (inp.consume('reload')) this.startReload();
     this.near = near; this.nearPr = near ? this.promptFor(near) : null;
     const cw = this.weapon;
-    if (inp.fire && p.fireCd <= 0 && p.reloadT <= 0 && p.swapT <= 0 && p.knifeCd <= 0.35 && !sprinting && (cw.def.auto || !p.prevFire)) this.shoot();
+    const auto = easy && this.autoT > 0.1 && !down;
+    if ((inp.fire || auto) && p.fireCd <= 0 && p.reloadT <= 0 && p.swapT <= 0 && p.knifeCd <= 0.35 && (!sprinting || auto) && (cw.def.auto || !p.prevFire || auto)) this.shoot();
     p.prevFire = inp.fire;
 
     // camera + view model

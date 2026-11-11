@@ -10,7 +10,7 @@ const defaults = () => ({
   starter: 'vesper',
   weapons: {},
   best: { round: 0, kills: 0 },
-  settings: { sens: 1, invert: false, vol: 0.7, fov: 75, quality: 1, lefty: false },
+  settings: { sens: 1, invert: false, vol: 0.7, fov: 75, quality: 1, lefty: false, simple: true },
 });
 
 export function loadProfile() {

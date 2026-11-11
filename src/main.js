@@ -16,6 +16,7 @@ const TIPS = [
   'Iron Hide lets you take five hits instead of two.',
   'Levelling a weapon unlocks its attachments in the lobby.',
   'Keep the last zombie alive to shop in peace.',
+  'With simple controls on, just keep a zombie in your sights and the gun fires itself.',
   'Boards on a window buy you time. Each repair pays 10 points.',
   'The power lever is in the main hall. Perk machines stay dark until you pull it.',
   'The teleporter in the main hall leads to the Reforge bench.',
@@ -90,18 +91,19 @@ function bindSettings() {
   const upd = () => {
     $('o-sens').textContent = s.sens.toFixed(2); $('o-fov').textContent = s.fov; $('o-vol').textContent = Math.round(s.vol * 100);
     setVolume(s.vol); input.sens = s.sens; input.lefty = s.lefty;
-    document.body.classList.toggle('lefty', s.lefty);
+    document.body.classList.toggle('lefty', s.lefty); document.body.classList.toggle('simple', s.simple);
     if (game) game.applySettings();
     saveProfile(profile);
   };
   $('set-sens').value = s.sens; $('set-fov').value = s.fov; $('set-vol').value = s.vol; $('set-quality').value = s.quality;
-  $('set-invert').checked = s.invert; $('set-lefty').checked = s.lefty;
+  $('set-invert').checked = s.invert; $('set-lefty').checked = s.lefty; $('set-simple').checked = s.simple;
   $('set-sens').oninput = e => { s.sens = +e.target.value; upd(); };
   $('set-fov').oninput = e => { s.fov = +e.target.value; upd(); };
   $('set-vol').oninput = e => { s.vol = +e.target.value; upd(); };
   $('set-quality').onchange = e => { s.quality = +e.target.value; upd(); };
   $('set-invert').onchange = e => { s.invert = e.target.checked; upd(); };
   $('set-lefty').onchange = e => { s.lefty = e.target.checked; upd(); };
+  $('set-simple').onchange = e => { s.simple = e.target.checked; upd(); };
   upd();
 }
 

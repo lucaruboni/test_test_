@@ -222,6 +222,11 @@ h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .lefty #btn-swap { right: auto; left: max(20px, calc(var(--sl) + 6px)); }
 .lefty #btn-sprint { left: auto; right: max(24px, calc(var(--sr) + 10px)); }
 
+.simple #btn-knife, .simple #btn-jump, .simple #btn-sprint { display: none; }
+.simple #btn-swap { right: max(34px, calc(var(--sr) + 20px)); bottom: max(180px, calc(var(--sb) + 166px)); width: 60px; height: 60px; }
+.simple #btn-reload { width: 60px; height: 60px; }
+.simple #btn-ads { width: 60px; height: 60px; }
+.simple.lefty #btn-swap { right: auto; left: max(34px, calc(var(--sl) + 20px)); }
 #rotate { display: none; position: fixed; inset: 0; z-index: 100; background: var(--bg); align-items: center; justify-content: center; text-align: center; font-family: var(--display); font-size: 30px; letter-spacing: 0.1em; text-transform: uppercase; padding: 0 24px; }
 @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
 @media (max-height: 430px) { .btn { font-size: 19px; padding: 9px 24px 6px; min-height: 38px; } .help { font-size: 13px; } .form label { font-size: 15px; padding: 4px; } .card .kv:nth-of-type(n+4) { display: none; } }
